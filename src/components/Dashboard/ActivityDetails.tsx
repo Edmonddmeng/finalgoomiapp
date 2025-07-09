@@ -172,6 +172,26 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
         </div>
       </div>
 
+      {/* Related Tasks Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Related Tasks</h3>
+        {relatedTasks.length > 0 ? (
+          <ul className="space-y-2">
+            {relatedTasks.map((task) => (
+              <li
+                key={task.id}
+                className={`p-3 rounded-lg flex items-center gap-3 ${task.completed ? "bg-green-50 dark:bg-green-900/20 text-gray-500 dark:text-gray-400 line-through" : "bg-gray-50 dark:bg-slate-700/50"}`}
+              >
+                <div className={`w-2 h-2 rounded-full ${task.completed ? "bg-green-400" : "bg-yellow-400"}`}></div>
+                <span className="dark:text-gray-300">{task.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-center text-gray-500 dark:text-gray-400 py-4">No tasks related to this activity.</p>
+        )}
+      </div>
+
       {/* Personal Insights Section */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-4">
@@ -252,26 +272,6 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
             <p className="text-gray-500 dark:text-gray-400 mb-2">No AI insights generated yet</p>
             <p className="text-sm text-gray-400 dark:text-gray-500">Click the button above to get personalized insights about your activity performance</p>
           </div>
-        )}
-      </div>
-
-      {/* Related Tasks Section */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Related Tasks</h3>
-        {relatedTasks.length > 0 ? (
-          <ul className="space-y-2">
-            {relatedTasks.map((task) => (
-              <li
-                key={task.id}
-                className={`p-3 rounded-lg flex items-center gap-3 ${task.completed ? "bg-green-50 dark:bg-green-900/20 text-gray-500 dark:text-gray-400 line-through" : "bg-gray-50 dark:bg-slate-700/50"}`}
-              >
-                <div className={`w-2 h-2 rounded-full ${task.completed ? "bg-green-400" : "bg-yellow-400"}`}></div>
-                <span className="dark:text-gray-300">{task.title}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-4">No tasks related to this activity.</p>
         )}
       </div>
     </div>
