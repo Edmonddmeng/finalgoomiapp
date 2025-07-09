@@ -72,7 +72,7 @@ export const mockUser: User = {
     {
       id: "comp1",
       name: "State Science Fair",
-      category: "Science",
+      category: "clubs",
       placement: "1st Place",
       date: "2023-05-15",
       description: "Project on optimizing solar panel efficiency.",
@@ -80,7 +80,7 @@ export const mockUser: User = {
     {
       id: "comp2",
       name: "Math Olympiad",
-      category: "Mathematics",
+      category: "clubs",
       placement: "Top 10 Finalist",
       date: "2023-04-22",
       description: "Competed against top students in the state.",

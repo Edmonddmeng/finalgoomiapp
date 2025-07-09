@@ -7,7 +7,7 @@ import { RecentComments } from "./RecentComments"
 import { AcademicDetails } from "./AcademicDetails"
 import { CompetitionDetails } from "./CompetitionDetails"
 import { ActivityDetails } from "./ActivityDetails"
-import type { User, Competition, Activity, Task } from "@/types"
+import type { User, Competition, Activity, Task, ActivityCategory } from "@/types"
 import { ChevronRight, Trophy, Users, Plus, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
 
 interface DashboardProps {
@@ -37,7 +37,7 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
 
   const [newCompetition, setNewCompetition] = useState({
     name: "",
-    category: "",
+    category: "clubs" as ActivityCategory,
     placement: "",
     date: "",
     description: "",
@@ -87,12 +87,12 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
   }
 
   const handleAddCompetition = () => {
-    if (!newCompetition.name.trim() || !newCompetition.category.trim() || !newCompetition.placement.trim()) return
+    if (!newCompetition.name.trim() || !newCompetition.placement.trim()) return
 
     const competition: Competition = {
       id: Date.now().toString(),
       name: newCompetition.name.trim(),
-      category: newCompetition.category.trim(),
+      category: newCompetition.category,
       placement: newCompetition.placement.trim(),
       date: newCompetition.date || new Date().toISOString().split("T")[0],
       description: newCompetition.description.trim(),
@@ -103,7 +103,7 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
       competitions: [...prev.competitions, competition],
     }))
 
-    setNewCompetition({ name: "", category: "", placement: "", date: "", description: "" })
+    setNewCompetition({ name: "", category: "clubs" as ActivityCategory, placement: "", date: "", description: "" })
     setShowAddCompetitionModal(false)
   }
 
@@ -508,13 +508,19 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
-                  <input
-                    type="text"
+                  <select
                     value={newCompetition.category}
-                    onChange={(e) => setNewCompetition((prev) => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g., Science, Mathematics, Sports, Arts"
+                    onChange={(e) =>
+                      setNewCompetition((prev) => ({ ...prev, category: e.target.value as ActivityCategory }))
+                    }
                     className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  />
+                  >
+                    <option value="clubs">Clubs</option>
+                    <option value="sports">Sports</option>
+                    <option value="arts">Arts</option>
+                    <option value="volunteer">Volunteer</option>
+                    <option value="work">Work</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -552,7 +558,7 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
                 <button
                   onClick={handleAddCompetition}
                   disabled={
-                    !newCompetition.name.trim() || !newCompetition.category.trim() || !newCompetition.placement.trim()
+                    !newCompetition.name.trim() || !newCompetition.placement.trim()
                   }
                   className="flex-1 px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >

@@ -1,6 +1,7 @@
 "use client"
-import type { User, Competition, Task } from "@/types"
+import type { User, Competition, Task, ActivityCategory } from "@/types"
 import { ChevronLeft, Trophy, Calendar } from "lucide-react"
+import { categoryDisplayNames, categoryColors, categoryBgColors } from "@/lib/categoryHelpers"
 
 interface CompetitionDetailsProps {
   user: User
@@ -22,28 +23,44 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
         <span>Back to Dashboard</span>
       </button>
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
-        <div className="flex items-start justify-between mb-4">
+      {/* Hero Section with consistent styling */}
+      <div className={`bg-gradient-to-r ${categoryColors[competition.category]} rounded-3xl p-8 text-white shadow-xl`}>
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <p className="text-sm font-medium text-yellow-600">{competition.category}</p>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{competition.name}</h2>
+            <p className="text-sm font-medium text-white/80 mb-1">
+              {categoryDisplayNames[competition.category]}
+            </p>
+            <h2 className="text-3xl font-bold mb-2">{competition.name}</h2>
           </div>
-          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 text-xs rounded-full font-medium">
+          <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium">
             Competition
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm text-gray-800 dark:text-gray-300">
-          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
-            <Trophy size={16} className="text-gray-500 dark:text-gray-400" />
-            <span>
-              Result: <span className="font-semibold text-gray-800 dark:text-gray-200">{competition.placement}</span>
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <Trophy size={20} />
+              <span className="text-lg font-semibold">{competition.placement}</span>
+            </div>
+            <p className="text-sm text-white/80">Competition Result</p>
           </div>
-          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
-            <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
-            <span>Date: {new Date(competition.date).toLocaleDateString()}</span>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <Calendar size={20} />
+              <span className="text-lg font-semibold">{new Date(competition.date).toLocaleDateString()}</span>
+            </div>
+            <p className="text-sm text-white/80">Competition Date</p>
           </div>
+        </div>
+      </div>
+
+      {/* Details Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+        <div className="mb-4">
+          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${categoryBgColors[competition.category]}`}>
+            {categoryDisplayNames[competition.category]}
+          </span>
         </div>
 
         {competition.description && (
@@ -52,8 +69,16 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{competition.description}</p>
           </div>
         )}
+
+        {competition.notes && (
+          <div className="mt-4">
+            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Additional Notes</h3>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{competition.notes}</p>
+          </div>
+        )}
       </div>
 
+      {/* Related Tasks Section */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Related Tasks</h3>
         {relatedTasks.length > 0 ? (

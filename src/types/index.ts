@@ -1,3 +1,5 @@
+export type ActivityCategory = "sports" | "arts" | "volunteer" | "work" | "clubs"
+
 export interface User {
   id: string
   name: string
@@ -32,7 +34,7 @@ export interface Achievement {
 export interface Activity {
   id: string
   name: string
-  category: "sports" | "arts" | "volunteer" | "work" | "clubs"
+  category: ActivityCategory
   description: string
   startDate: string
   endDate?: string
@@ -53,7 +55,7 @@ export interface Academic {
 export interface Competition {
   id: string
   name: string
-  category: string
+  category: ActivityCategory
   placement: string
   date: string
   description: string
