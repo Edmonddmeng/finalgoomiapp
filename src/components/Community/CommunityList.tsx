@@ -6,16 +6,20 @@ import type { Community } from "@/types"
 interface CommunityListProps {
   communities: Community[]
   onJoin: (communityId: string) => void
+  onSelectCommunity?: (community: Community) => void
 }
 
-export function CommunityList({ communities, onJoin }: CommunityListProps) {
+export function CommunityList({ communities, onJoin, onSelectCommunity }: CommunityListProps) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Popular Communities</h3>
       <div className="space-y-4">
         {communities.map((community) => (
           <div key={community.id} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onSelectCommunity?.(community)}
+            >
               <Image
                 src={community.avatar || "/placeholder.svg"}
                 alt={community.name}

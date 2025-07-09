@@ -56,6 +56,18 @@ export default function Home() {
     )
   }
 
+  const handleCreatePost = (newPost: Omit<CommunityPost, "id" | "createdAt" | "upvotes" | "downvotes" | "comments">) => {
+    const post: CommunityPost = {
+      ...newPost,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      upvotes: 0,
+      downvotes: 0,
+      comments: 0,
+    }
+    setPosts((prev) => [post, ...prev])
+  }
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case "dashboard":
@@ -78,6 +90,7 @@ export default function Home() {
             posts={posts}
             onJoinCommunity={handleJoinCommunity}
             onVotePost={handleVotePost}
+            onCreatePost={handleCreatePost}
           />
         )
       case "profile":
