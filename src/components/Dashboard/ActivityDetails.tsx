@@ -27,8 +27,7 @@ interface AIInsight {
 
 export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetailsProps) {
   const relatedTasks = tasks.filter((task) => 
-    task.title.toLowerCase().includes(activity.name.toLowerCase()) ||
-    task.category === activity.category
+    task.title.toLowerCase().includes(activity.name.toLowerCase())
   )
   
   const completedTasks = relatedTasks.filter(task => task.completed).length
