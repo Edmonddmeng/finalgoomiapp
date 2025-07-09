@@ -18,6 +18,8 @@ export default function Home() {
   const [tasks, setTasks] = useLocalStorage<Task[]>("tasks", mockTasks)
   const [communities, setCommunities] = useLocalStorage<CommunityType[]>("communities", mockCommunities)
   const [posts, setPosts] = useLocalStorage<CommunityPost[]>("posts", mockPosts)
+  const [userVotes, setUserVotes] = useLocalStorage<Record<string, "up" | "down">>("userVotes", {})
+  const [selectedCommunityFromProfile, setSelectedCommunityFromProfile] = useState<CommunityType | null>(null)
 
   const handleTaskToggle = (taskId: string) => {
     setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task)))
@@ -42,18 +44,45 @@ export default function Home() {
   }
 
   const handleVotePost = (postId: string, voteType: "up" | "down") => {
-    setPosts((prev) =>
-      prev.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            upvotes: voteType === "up" ? post.upvotes + 1 : post.upvotes,
-            downvotes: voteType === "down" ? post.downvotes + 1 : post.downvotes,
+    const existingVote = userVotes[postId]
+    
+    // If user is clicking the same vote type, remove their vote
+    if (existingVote === voteType) {
+      setUserVotes((prev) => {
+        const newVotes = { ...prev }
+        delete newVotes[postId]
+        return newVotes
+      })
+      
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              upvotes: voteType === "up" ? post.upvotes - 1 : post.upvotes,
+              downvotes: voteType === "down" ? post.downvotes - 1 : post.downvotes,
+            }
           }
-        }
-        return post
-      }),
-    )
+          return post
+        }),
+      )
+    } else {
+      // Update or add the vote
+      setUserVotes((prev) => ({ ...prev, [postId]: voteType }))
+      
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              upvotes: voteType === "up" ? post.upvotes + 1 : (existingVote === "up" ? post.upvotes - 1 : post.upvotes),
+              downvotes: voteType === "down" ? post.downvotes + 1 : (existingVote === "down" ? post.downvotes - 1 : post.downvotes),
+            }
+          }
+          return post
+        }),
+      )
+    }
   }
 
   const handleCreatePost = (newPost: Omit<CommunityPost, "id" | "createdAt" | "upvotes" | "downvotes" | "comments">) => {
@@ -66,6 +95,29 @@ export default function Home() {
       comments: [],
     }
     setPosts((prev) => [post, ...prev])
+  }
+
+  const handleCreateCommunity = (newCommunity: Omit<CommunityType, "id" | "members" | "joined">) => {
+    const community: CommunityType = {
+      ...newCommunity,
+      id: Date.now().toString(),
+      members: 1,
+      joined: true,
+    }
+    setCommunities((prev) => [community, ...prev])
+  }
+
+  const handleDeleteCommunity = (communityId: string) => {
+    setCommunities((prev) => prev.filter((community) => community.id !== communityId))
+    // Also remove posts from that community
+    setPosts((prev) => prev.filter((post) => post.communityId !== communityId))
+  }
+
+  const handleNavigateToCommunity = (tabId: string, community?: CommunityType) => {
+    if (community) {
+      setSelectedCommunityFromProfile(community)
+    }
+    setActiveTab(tabId)
   }
 
   const renderActiveTab = () => {
@@ -88,13 +140,23 @@ export default function Home() {
           <Community
             communities={communities}
             posts={posts}
+            userVotes={userVotes}
+            selectedCommunity={selectedCommunityFromProfile}
             onJoinCommunity={handleJoinCommunity}
             onVotePost={handleVotePost}
             onCreatePost={handleCreatePost}
+            onCreateCommunity={handleCreateCommunity}
+            onClearSelectedCommunity={() => setSelectedCommunityFromProfile(null)}
           />
         )
       case "profile":
-        return <Profile user={user} />
+        return <Profile 
+          user={user} 
+          communities={communities} 
+          onCreateCommunity={handleCreateCommunity} 
+          onDeleteCommunity={handleDeleteCommunity}
+          onNavigateToCommunity={handleNavigateToCommunity}
+        />
       default:
         return <Dashboard user={user} tasks={tasks} setUser={setUser} />
     }

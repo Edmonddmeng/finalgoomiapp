@@ -1,12 +1,13 @@
 "use client"
 import { useState } from "react"
 import type { Community as CommunityType, CommunityPost } from "@/types"
-import { ChevronLeft, Users, Plus, Send, X } from "lucide-react"
+import { ChevronLeft, Users, Plus, Send, X, Clock, TrendingUp } from "lucide-react"
 import { PostCard } from "./PostCard"
 
 interface CommunityViewProps {
   community: CommunityType
   posts: CommunityPost[]
+  userVotes: Record<string, "up" | "down">
   isJoined: boolean
   onBack: () => void
   onJoin: (communityId: string) => void
@@ -17,6 +18,7 @@ interface CommunityViewProps {
 export function CommunityView({ 
   community, 
   posts, 
+  userVotes,
   isJoined,
   onBack, 
   onJoin, 
@@ -24,6 +26,7 @@ export function CommunityView({
   onCreatePost 
 }: CommunityViewProps) {
   const [showCreatePost, setShowCreatePost] = useState(false)
+  const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
   const [newPost, setNewPost] = useState({
     title: "",
     content: "",
@@ -33,6 +36,32 @@ export function CommunityView({
 
   // Filter posts for this specific community
   const communityPosts = posts.filter(post => post.communityId === community.id)
+
+  // Sort posts based on selected criteria
+  const sortedCommunityPosts = [...communityPosts].sort((a, b) => {
+    if (sortBy === "recent") {
+      // Sort by most recent
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    } else {
+      // Sort by most liked in the past week
+      const oneWeekAgo = new Date()
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+      
+      // Filter posts from the past week
+      const aIsRecent = new Date(a.createdAt) >= oneWeekAgo
+      const bIsRecent = new Date(b.createdAt) >= oneWeekAgo
+      
+      // If both are from past week, sort by upvotes
+      if (aIsRecent && bIsRecent) {
+        return b.upvotes - a.upvotes
+      }
+      // If only one is from past week, prioritize it
+      if (aIsRecent) return -1
+      if (bIsRecent) return 1
+      // If neither is from past week, sort by upvotes
+      return b.upvotes - a.upvotes
+    }
+  })
 
   const handleCreatePost = () => {
     if (!newPost.title.trim() || !newPost.content.trim()) return
@@ -235,9 +264,37 @@ export function CommunityView({
 
       {/* Posts Section */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {isJoined ? "Community Posts" : "Recent Posts"}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {isJoined ? "Community Posts" : "Recent Posts"}
+          </h2>
+          
+          {/* Sort Options */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortBy("recent")}
+              className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5 ${
+                sortBy === "recent"
+                  ? "bg-teal-500 text-white"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+              }`}
+            >
+              <Clock size={14} />
+              Recent
+            </button>
+            <button
+              onClick={() => setSortBy("popular")}
+              className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5 ${
+                sortBy === "popular"
+                  ? "bg-teal-500 text-white"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+              }`}
+            >
+              <TrendingUp size={14} />
+              Popular
+            </button>
+          </div>
+        </div>
         
         {!isJoined && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
@@ -247,9 +304,9 @@ export function CommunityView({
           </div>
         )}
 
-        {communityPosts.length > 0 ? (
-          communityPosts.map((post) => (
-            <PostCard key={post.id} post={post} onVote={onVotePost} />
+        {sortedCommunityPosts.length > 0 ? (
+          sortedCommunityPosts.map((post) => (
+            <PostCard key={post.id} post={post} onVote={onVotePost} userVote={userVotes[post.id]} />
           ))
         ) : (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center">

@@ -93,7 +93,7 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
       </button>
 
       {/* Hero Section with consistent styling */}
-      <div className={`bg-gradient-to-r ${competitionCategoryColors[competition.category]} rounded-3xl p-8 text-white shadow-xl`}>
+      <div className={`bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-8 text-white shadow-xl`}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-sm font-medium text-white/80 mb-1">
@@ -101,7 +101,7 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             </p>
             <h2 className="text-3xl font-bold mb-2">{competition.name}</h2>
           </div>
-          <span className="px-4 py-2 bg-gradient-to-r from-yellow-400/30 to-orange-400/30 backdrop-blur-sm text-white text-sm rounded-full font-medium border border-white/30">
+          <span className="px-4 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-sm rounded-full font-medium border border-white/30">
             Competition
           </span>
         </div>

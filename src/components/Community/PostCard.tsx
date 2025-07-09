@@ -6,22 +6,31 @@ import type { CommunityPost } from "@/types"
 interface PostCardProps {
   post: CommunityPost
   onVote: (postId: string, voteType: "up" | "down") => void
+  userVote?: "up" | "down"
 }
 
-export function PostCard({ post, onVote }: PostCardProps) {
+export function PostCard({ post, onVote, userVote }: PostCardProps) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-5 flex gap-4">
       <div className="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400">
         <button
           onClick={() => onVote(post.id, "up")}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full hover:text-green-500"
+          className={`p-1 rounded-full transition-colors ${
+            userVote === "up" 
+              ? "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400" 
+              : "hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-green-500"
+          }`}
         >
           <ArrowUp size={18} />
         </button>
         <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{post.upvotes - post.downvotes}</span>
         <button
           onClick={() => onVote(post.id, "down")}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full hover:text-red-500"
+          className={`p-1 rounded-full transition-colors ${
+            userVote === "down" 
+              ? "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400" 
+              : "hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-red-500"
+          }`}
         >
           <ArrowDown size={18} />
         </button>
