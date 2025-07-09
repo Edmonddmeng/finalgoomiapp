@@ -39,7 +39,7 @@ export const mockUser: User = {
     {
       id: "act1",
       name: "Varsity Soccer",
-      category: "extracurricular",
+      category: "sports",
       description: "Starting forward for the varsity soccer team.",
       startDate: "2022-08-25",
       hours: 10,
@@ -48,7 +48,7 @@ export const mockUser: User = {
     {
       id: "act2",
       name: "Coding Club",
-      category: "extracurricular",
+      category: "clubs",
       description: "Developed a mobile app for school event notifications.",
       startDate: "2022-09-10",
       hours: 5,
@@ -57,7 +57,7 @@ export const mockUser: User = {
     {
       id: "act3",
       name: "Hospital Volunteer",
-      category: "extracurricular",
+      category: "volunteer",
       description: "Assisted patients and staff at the local hospital.",
       startDate: "2023-06-01",
       hours: 8,
