@@ -7,25 +7,48 @@ interface ProfileProps {
 }
 
 export function Profile({ user }: ProfileProps) {
+  const totalAchievements = user.achievements.length
+  const averageGrade = user.academics.length > 0 
+    ? (user.academics.reduce((sum, course) => {
+        const gradePoints = { 'A': 4, 'A-': 3.7, 'B+': 3.3, 'B': 3, 'B-': 2.7, 'C+': 2.3, 'C': 2, 'C-': 1.7, 'D': 1, 'F': 0 }
+        return sum + (gradePoints[course.grade as keyof typeof gradePoints] || 0)
+      }, 0) / user.academics.length).toFixed(2)
+    : '0.00'
+
   return (
     <div className="space-y-8">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+      {/* Profile Title Card */}
+      <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-3xl p-8 text-white shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <Image
             src={user.avatar || "/placeholder.svg"}
             alt={user.name}
             width={128}
             height={128}
-            className="rounded-full border-4 border-purple-200"
+            className="rounded-full border-4 border-white/30 shadow-xl"
           />
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{user.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">{user.email}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-              Joined on {new Date(user.joinedDate).toLocaleDateString()}
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-4xl font-bold mb-2">{user.name}</h1>
+            <p className="text-white/90 text-lg">{user.email}</p>
+            <p className="text-sm text-white/70 mt-2">
+              Member since {new Date(user.joinedDate).toLocaleDateString()}
             </p>
+            <div className="mt-4 flex flex-wrap gap-4">
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
+                <span className="font-bold">{user.progressLevel}%</span>
+                <span className="text-sm ml-1 text-white/90">Progress</span>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
+                <span className="font-bold">{totalAchievements}</span>
+                <span className="text-sm ml-1 text-white/90">Achievements</span>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
+                <span className="font-bold">{user.gpa}</span>
+                <span className="text-sm ml-1 text-white/90">GPA</span>
+              </div>
+            </div>
           </div>
-          <button className="ml-auto bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-300 px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-white/30 transition-colors">
             <Settings size={16} />
             <span>Edit Profile</span>
           </button>

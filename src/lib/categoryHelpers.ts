@@ -16,6 +16,15 @@ export const categoryColors: Record<ActivityCategory, string> = {
   clubs: "from-amber-500 to-orange-600"
 }
 
+// More vibrant gradients for competition hero sections
+export const competitionCategoryColors: Record<ActivityCategory, string> = {
+  sports: "from-red-600 via-orange-500 to-yellow-500", // Energetic fire gradient
+  arts: "from-purple-600 via-pink-500 to-rose-400", // Creative vibrant gradient
+  volunteer: "from-emerald-500 via-teal-400 to-cyan-400", // Fresh, uplifting gradient
+  work: "from-blue-600 via-indigo-500 to-purple-500", // Professional yet vibrant
+  clubs: "from-amber-500 via-yellow-400 to-lime-400" // Bright, energetic gradient
+}
+
 export const categoryBgColors: Record<ActivityCategory, string> = {
   sports: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
   arts: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",

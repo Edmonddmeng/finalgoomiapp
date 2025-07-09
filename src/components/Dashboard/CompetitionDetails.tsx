@@ -2,7 +2,7 @@
 import { useState } from "react"
 import type { User, Competition, Task, ActivityCategory } from "@/types"
 import { ChevronLeft, Trophy, Calendar, TrendingUp, BookOpen, Sparkles, Save } from "lucide-react"
-import { categoryDisplayNames, categoryColors, categoryBgColors } from "@/lib/categoryHelpers"
+import { categoryDisplayNames, competitionCategoryColors, categoryBgColors } from "@/lib/categoryHelpers"
 import { useLocalStorage } from "@/hooks/useLocalStorage"
 
 interface CompetitionDetailsProps {
@@ -93,7 +93,7 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
       </button>
 
       {/* Hero Section with consistent styling */}
-      <div className={`bg-gradient-to-r ${categoryColors[competition.category]} rounded-3xl p-8 text-white shadow-xl`}>
+      <div className={`bg-gradient-to-r ${competitionCategoryColors[competition.category]} rounded-3xl p-8 text-white shadow-xl`}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-sm font-medium text-white/80 mb-1">
@@ -101,25 +101,25 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             </p>
             <h2 className="text-3xl font-bold mb-2">{competition.name}</h2>
           </div>
-          <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium">
+          <span className="px-4 py-2 bg-gradient-to-r from-yellow-400/30 to-orange-400/30 backdrop-blur-sm text-white text-sm rounded-full font-medium border border-white/30">
             Competition
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <Trophy size={20} />
               <span className="text-lg font-semibold">{competition.placement}</span>
             </div>
-            <p className="text-sm text-white/80">Competition Result</p>
+            <p className="text-sm text-white/90">Competition Result</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <Calendar size={20} />
               <span className="text-lg font-semibold">{new Date(competition.date).toLocaleDateString()}</span>
             </div>
-            <p className="text-sm text-white/80">Competition Date</p>
+            <p className="text-sm text-white/90">Competition Date</p>
           </div>
         </div>
       </div>

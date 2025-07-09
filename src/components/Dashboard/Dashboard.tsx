@@ -161,19 +161,26 @@ export function Dashboard({ user, tasks = [], setUser }: DashboardProps) {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-6 text-white">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold mb-3">Hello, {user.name.split(" ")[0]}!</h1>
-          <p className="text-lg opacity-90 italic leading-relaxed max-w-sm mx-auto">"{userQuote}"</p>
-        </div>
-        <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-8 text-white shadow-xl">
+        <div className="max-w-4xl">
+          <h1 className="text-4xl font-bold mb-3">Hello, {user.name.split(" ")[0]}! 👋</h1>
+          <p className="text-lg text-white/90 italic leading-relaxed mb-6">"{userQuote}"</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/30 flex items-center gap-3">
               <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium opacity-90">Current Streak</span>
+              <div>
+                <span className="text-2xl font-bold">{currentStreak}</span>
+                <span className="text-sm ml-2 text-white/90">Day Streak</span>
+              </div>
             </div>
-            <div className="text-4xl font-bold mb-1">{currentStreak}</div>
-            <div className="text-sm opacity-80">days of progress</div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/30">
+              <span className="text-2xl font-bold">{user.gpa}</span>
+              <span className="text-sm ml-2 text-white/90">GPA</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/30">
+              <span className="text-2xl font-bold">{user.progressLevel}%</span>
+              <span className="text-sm ml-2 text-white/90">Progress</span>
+            </div>
           </div>
         </div>
       </div>
