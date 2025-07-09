@@ -63,7 +63,7 @@ export default function Home() {
       createdAt: new Date().toISOString(),
       upvotes: 0,
       downvotes: 0,
-      comments: 0,
+      comments: [],
     }
     setPosts((prev) => [post, ...prev])
   }
