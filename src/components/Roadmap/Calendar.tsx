@@ -16,9 +16,10 @@ export function Calendar({ events }: CalendarProps) {
   const startDay = startOfMonth.getDay()
   const daysInMonth = endOfMonth.getDate()
 
-  const days = Array.from({ length: startDay }, (_, i) => null).concat(
-    Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  )
+  const days: (number | null)[] = [
+    ...Array.from({ length: startDay }, (): null => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
 
   const changeMonth = (offset: number) => {
     setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1))

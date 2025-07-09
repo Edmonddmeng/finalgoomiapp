@@ -61,13 +61,13 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
   const achievementsCount = user.achievements.length
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Standardized Tests Card */}
-      <div className="relative p-4 rounded-2xl bg-blue-500 text-white overflow-hidden">
-        <BookOpen className="absolute -right-2 -bottom-2 text-white/20" size={64} />
+    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      {/* Standardized Tests Card - Top Left */}
+      <div className="relative p-3 sm:p-4 rounded-2xl bg-blue-500 text-white overflow-hidden">
+        <BookOpen className="absolute -right-2 -bottom-2 text-white/20" size={48} />
         <div className="relative z-10">
           <div className="flex items-start justify-between">
-            <p className="text-sm text-white/80">Standardized Tests</p>
+            <p className="text-xs sm:text-sm text-white/80">Standardized Tests</p>
             {editingStat !== "tests" && (
               <button
                 onClick={() => handleEditClick("tests")}
@@ -89,7 +89,7 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
                   type="number"
                   value={satValue}
                   onChange={(e) => setSatValue(e.target.value)}
-                  className="w-full bg-transparent text-xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
+                  className="w-full bg-transparent text-lg sm:text-xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -102,7 +102,7 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
                   type="number"
                   value={actValue}
                   onChange={(e) => setActValue(e.target.value)}
-                  className="w-full bg-transparent text-xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
+                  className="w-full bg-transparent text-lg sm:text-xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
                 />
               </div>
               <div className="flex justify-end gap-2 mt-2">
@@ -118,23 +118,23 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
             <div className="flex items-end gap-6 mt-2">
               <div>
                 <p className="text-xs text-white/70 font-medium">SAT</p>
-                <p className="text-2xl font-bold">{user.standardizedScores?.sat || "N/A"}</p>
+                <p className="text-xl sm:text-2xl font-bold">{user.standardizedScores?.sat || "N/A"}</p>
               </div>
               <div>
                 <p className="text-xs text-white/70 font-medium">ACT</p>
-                <p className="text-2xl font-bold">{user.standardizedScores?.act || "N/A"}</p>
+                <p className="text-xl sm:text-2xl font-bold">{user.standardizedScores?.act || "N/A"}</p>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* GPA Card */}
-      <div className="relative p-4 rounded-2xl bg-green-500 text-white overflow-hidden">
-        <Award className="absolute -right-2 -bottom-2 text-white/20" size={64} />
+      {/* GPA Card - Top Right */}
+      <div className="relative p-3 sm:p-4 rounded-2xl bg-green-500 text-white overflow-hidden">
+        <Award className="absolute -right-2 -bottom-2 text-white/20" size={48} />
         <div className="relative z-10">
           <div className="flex items-start justify-between">
-            <p className="text-sm text-white/80">Current GPA</p>
+            <p className="text-xs sm:text-sm text-white/80">Current GPA</p>
             {editingStat !== "gpa" && (
               <button
                 onClick={() => handleEditClick("gpa")}
@@ -151,7 +151,7 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
                 step="0.01"
                 value={gpaValue}
                 onChange={(e) => setGpaValue(e.target.value)}
-                className="w-full bg-transparent text-3xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
+                className="w-full bg-transparent text-xl sm:text-3xl font-bold text-white border-b-2 border-white/50 focus:outline-none"
                 autoFocus
               />
               <div className="flex gap-2">
@@ -164,26 +164,26 @@ export function StatsCards({ user, setUser }: StatsCardsProps) {
               </div>
             </div>
           ) : (
-            <p className="text-3xl font-bold mt-2">{user.gpa.toFixed(2)}</p>
+            <p className="text-2xl sm:text-3xl font-bold mt-2">{user.gpa.toFixed(2)}</p>
           )}
         </div>
       </div>
 
-      {/* Activities Card */}
-      <div className="relative p-4 rounded-2xl bg-purple-500 text-white overflow-hidden">
-        <Users className="absolute -right-2 -bottom-2 text-white/20" size={64} />
+      {/* Activities Card - Bottom Left */}
+      <div className="relative p-3 sm:p-4 rounded-2xl bg-purple-500 text-white overflow-hidden">
+        <Users className="absolute -right-2 -bottom-2 text-white/20" size={48} />
         <div className="relative z-10">
-          <p className="text-sm text-white/80">Total Activities</p>
-          <p className="text-3xl font-bold mt-2">{activitiesCount}</p>
+          <p className="text-xs sm:text-sm text-white/80">Total Activities</p>
+          <p className="text-2xl sm:text-3xl font-bold mt-2">{activitiesCount}</p>
         </div>
       </div>
 
-      {/* Achievements Card */}
-      <div className="relative p-4 rounded-2xl bg-yellow-500 text-white overflow-hidden">
-        <Trophy className="absolute -right-2 -bottom-2 text-white/20" size={64} />
+      {/* Achievements Card - Bottom Right */}
+      <div className="relative p-3 sm:p-4 rounded-2xl bg-yellow-500 text-white overflow-hidden">
+        <Trophy className="absolute -right-2 -bottom-2 text-white/20" size={48} />
         <div className="relative z-10">
-          <p className="text-sm text-white/80">Total Achievements</p>
-          <p className="text-3xl font-bold mt-2">{achievementsCount}</p>
+          <p className="text-xs sm:text-sm text-white/80">Total Achievements</p>
+          <p className="text-2xl sm:text-3xl font-bold mt-2">{achievementsCount}</p>
         </div>
       </div>
     </div>
