@@ -1,69 +1,24 @@
-export type ActivityCategory = "sports" | "arts" | "volunteer" | "work" | "clubs"
+// Re-export all types from domain-specific files
+export * from './user'
+export * from './academic'
+export * from './competition'
+export * from './activity'
+export * from './task'
+export * from './community'
+export * from './achievement'
+export * from './api'
+export * from './evaluations'
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  avatar: string
-  gpa: number
-  standardizedScores: {
-    sat?: number
-    act?: number
-    ap?: { subject: string; score: number }[]
-  }
-  achievements: Achievement[]
-  activities: Activity[]
-  academics: Academic[]
-  competitions: Competition[]
-  comments: Comment[]
-  progressLevel: number
-  totalPoints: number
-  streak: number
-  joinedDate: string
-}
+// Legacy type mappings for backward compatibility
+// These will be deprecated in future versions
+import { ActivityCategory as NewActivityCategory } from './activity'
+import { CompetitionCategory } from './competition'
+import { Achievement } from './achievement'
 
-export interface Achievement {
-  id: string
-  title: string
-  description: string
-  icon: string
-  dateEarned: string
-  category: "academic" | "sports" | "community" | "personal"
-}
+// Map old ActivityCategory that was used for competitions to new structure
+export type ActivityCategory = NewActivityCategory | "work" | "clubs"
 
-export interface Activity {
-  id: string
-  name: string
-  category: ActivityCategory
-  description: string
-  startDate: string
-  endDate?: string
-  hours: number
-  position?: string
-  totalPoints?: number
-}
-
-export interface Academic {
-  id: string
-  subject: string
-  grade: string
-  credits: number
-  term: string
-  year: number
-}
-
-export interface Competition {
-  id: string
-  name: string
-  category: ActivityCategory
-  placement: string
-  date: string
-  description: string
-  notes?: string
-  satisfaction?: number
-  resultsAdded?: boolean
-}
-
+// Legacy interfaces that extend new ones for compatibility
 export interface Comment {
   id: string
   author: string
@@ -71,17 +26,6 @@ export interface Comment {
   content: string
   date: string
   sentiment: "positive" | "neutral" | "constructive"
-}
-
-export interface Task {
-  id: string
-  title: string
-  description: string
-  dueDate: string
-  priority: "low" | "medium" | "high"
-  category: "academic" | "personal" | "extracurricular"
-  completed: boolean
-  createdAt: string
 }
 
 export interface Event {
@@ -94,36 +38,38 @@ export interface Event {
   priority: "low" | "medium" | "high"
 }
 
-export interface PostComment {
-  id: string
-  content: string
-  author: string
-  authorAvatar: string
-  date: string
-  upvotes: number
+// Dashboard specific types
+export interface DashboardStats {
+  currentGPA: number
+  totalCredits: number
+  currentStreak: number
+  tasksCompleted: number
+  upcomingDeadlines: number
+  recentAchievements: Achievement[]
+  weeklyProgress: {
+    tasksCompleted: number
+    hoursStudied: number
+    activitiesAttended: number
+  }
 }
 
-export interface CommunityPost {
+// Notification types
+export interface Notification {
   id: string
+  userId: string
+  type: NotificationType
   title: string
-  content: string
-  author: string
-  authorAvatar: string
-  community: string
-  upvotes: number
-  downvotes: number
-  comments: PostComment[]
-  tags: string[]
-  communityId: string
+  message: string
+  data?: Record<string, any>
+  read: boolean
   createdAt: string
 }
 
-export interface Community {
-  id: string
-  name: string
-  description: string
-  members: number
-  category: string
-  avatar: string
-  joined: boolean
-}
+export type NotificationType = 
+  | 'task_reminder'
+  | 'achievement_unlocked'
+  | 'community_post'
+  | 'comment_reply'
+  | 'deadline_approaching'
+  | 'streak_milestone'
+  | 'weekly_report'

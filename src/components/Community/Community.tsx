@@ -1,36 +1,85 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { CommunityList } from "./CommunityList"
 import { CommunityView } from "./CommunityView"
 import { PostCard } from "./PostCard"
 import type { Community as CommunityType, CommunityPost } from "@/types"
-import { Search, Hash, Users, Clock, TrendingUp, UserCheck } from "lucide-react"
+import { Search, Hash, Users, Clock, TrendingUp, UserCheck, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useApiQuery } from "@/hooks/useApiQuery"
+import { useApiMutation } from "@/hooks/useApiMutation"
+import { communityService } from "@/services/communityService"
 
-interface CommunityProps {
-  communities: CommunityType[]
-  posts: CommunityPost[]
-  userVotes: Record<string, "up" | "down">
-  selectedCommunity?: CommunityType | null
-  onJoinCommunity: (communityId: string) => void
-  onVotePost: (postId: string, voteType: "up" | "down") => void
-  onCreatePost?: (post: Omit<CommunityPost, "id" | "createdAt" | "upvotes" | "downvotes" | "comments">) => void
-  onCreateCommunity?: (community: Omit<CommunityType, "id" | "members" | "joined">) => void
-  onClearSelectedCommunity?: () => void
-}
-
-export function Community({ communities, posts, userVotes, selectedCommunity: selectedCommunityProp, onJoinCommunity, onVotePost, onCreatePost, onCreateCommunity, onClearSelectedCommunity }: CommunityProps) {
+export function Community() {
+  const { user } = useAuth()
+  
+  // Fetch data from API
+  const { data: communitiesData, isLoading: communitiesLoading, refetch: refetchCommunities } = useApiQuery(
+    () => communityService.getCommunities(),
+    ['communities'],
+    { enabled: !!user }
+  )
+  
+  const { data: postsData, isLoading: postsLoading, refetch: refetchPosts } = useApiQuery(
+    () => communityService.getPostsList(),
+    ['posts'],
+    { enabled: !!user }
+  )
+  
+  const { data: userVotesData } = useApiQuery(
+    () => communityService.getUserVotes(),
+    ['userVotes'],
+    { enabled: !!user }
+  )
+  
+  const communities = communitiesData || []
+  const posts = postsData || []
+  const userVotes = userVotesData || {}
+  
+  // Mutations
+  const joinCommunityMutation = useApiMutation(
+    (communityId: string) => communityService.joinCommunity(communityId)
+  )
+  
+  const votePostMutation = useApiMutation(
+    ({ postId, voteType }: { postId: string; voteType: "up" | "down" }) => 
+      communityService.votePost(postId, voteType)
+  )
+  
+  const createPostMutation = useApiMutation(
+    (post: { title: string; content: string; communityId: string; tags?: string[] }) => 
+      communityService.createPost(post)
+  )
+  
+  const createCommunityMutation = useApiMutation(
+    (community: Omit<CommunityType, "id" | "members" | "joined">) => 
+      communityService.createCommunity(community)
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [searchType, setSearchType] = useState<"all" | "posts" | "communities" | "my-communities">("all")
-  const [selectedCommunity, setSelectedCommunity] = useState<CommunityType | null>(selectedCommunityProp || null)
+  const [selectedCommunity, setSelectedCommunity] = useState<CommunityType | null>(null)
   const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
 
-  // Use the selected community from props if it exists
-  useEffect(() => {
-    if (selectedCommunityProp) {
-      setSelectedCommunity(selectedCommunityProp)
-      onClearSelectedCommunity?.()
-    }
-  }, [selectedCommunityProp, onClearSelectedCommunity])
+  // Event handlers
+  const handleJoinCommunity = async (communityId: string) => {
+    await joinCommunityMutation.mutateAsync(communityId)
+    refetchCommunities()
+  }
+  
+  const handleVotePost = async (postId: string, voteType: "up" | "down") => {
+    await votePostMutation.mutateAsync({ postId, voteType })
+    refetchPosts()
+  }
+  
+  const handleCreatePost = async (post: { title: string; content: string; communityId: string; tags?: string[] }) => {
+    await createPostMutation.mutateAsync(post)
+    refetchPosts()
+  }
+  
+  const handleCreateCommunity = async (community: Omit<CommunityType, "id" | "members" | "joined">) => {
+    await createCommunityMutation.mutateAsync(community)
+    refetchCommunities()
+  }
 
   // Get joined communities
   const joinedCommunities = communities.filter(c => c.joined)
@@ -45,8 +94,8 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
     return (
       post.title.toLowerCase().includes(searchLower) ||
       post.content.toLowerCase().includes(searchLower) ||
-      post.author.toLowerCase().includes(searchLower) ||
-      post.tags.some(tag => tag.toLowerCase().includes(searchLower))
+      post.author.name.toLowerCase().includes(searchLower) ||
+      post.tags?.some(tag => tag.toLowerCase().includes(searchLower))
     )
   })
 
@@ -89,18 +138,31 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
     }
   })
 
+  // Show loading state
+  if (communitiesLoading || postsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-3">
+          <Loader2 className="animate-spin h-12 w-12 text-teal-600 mx-auto" />
+          <p className="text-gray-500 dark:text-gray-400">Loading community...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Calculate popular users based on total upvotes
   const userStats = posts.reduce((acc, post) => {
-    if (!acc[post.author]) {
-      acc[post.author] = {
-        author: post.author,
-        authorAvatar: post.authorAvatar,
+    const authorId = post.author.id
+    if (!acc[authorId]) {
+      acc[authorId] = {
+        author: post.author.name,
+        authorAvatar: post.author.avatar || "",
         totalUpvotes: 0,
         postCount: 0
       }
     }
-    acc[post.author].totalUpvotes += post.upvotes
-    acc[post.author].postCount += 1
+    acc[authorId].totalUpvotes += post.upvotes
+    acc[authorId].postCount += 1
     return acc
   }, {} as Record<string, { author: string; authorAvatar: string; totalUpvotes: number; postCount: number }>)
 
@@ -117,9 +179,9 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
         userVotes={userVotes}
         isJoined={selectedCommunity.joined}
         onBack={() => setSelectedCommunity(null)}
-        onJoin={onJoinCommunity}
-        onVotePost={onVotePost}
-        onCreatePost={onCreatePost || (() => {})}
+        onJoin={handleJoinCommunity}
+        onVotePost={handleVotePost}
+        onCreatePost={handleCreatePost}
       />
     )
   }
@@ -263,7 +325,7 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
         <div className={`${searchType === "all" ? "lg:col-span-2" : ""} space-y-6`}>
           {searchType !== "communities" && searchType !== "my-communities" && sortedPosts.length > 0 ? (
             sortedPosts.map((post) => (
-              <PostCard key={post.id} post={post} onVote={onVotePost} userVote={userVotes[post.id]} />
+              <PostCard key={post.id} post={post} onVote={handleVotePost} userVote={userVotes[post.id]} />
             ))
           ) : searchType !== "communities" && searchType !== "my-communities" && searchTerm ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center">
@@ -300,7 +362,7 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              onJoinCommunity(community.id)
+                              handleJoinCommunity(community.id)
                             }}
                             className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
                               community.joined
@@ -325,7 +387,7 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
             )
           ) : (
             sortedPosts.map((post) => (
-              <PostCard key={post.id} post={post} onVote={onVotePost} userVote={userVotes[post.id]} />
+              <PostCard key={post.id} post={post} onVote={handleVotePost} userVote={userVotes[post.id]} />
             ))
           )}
         </div>
@@ -335,7 +397,7 @@ export function Community({ communities, posts, userVotes, selectedCommunity: se
           <div className="lg:col-span-1 space-y-6">
             <CommunityList 
               communities={filteredCommunities.slice(0, 6)} 
-              onJoin={onJoinCommunity} 
+              onJoin={handleJoinCommunity} 
               onSelectCommunity={setSelectedCommunity}
             />
             

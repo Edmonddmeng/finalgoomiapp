@@ -1,20 +1,48 @@
 import { useState } from "react"
 import Image from "next/image"
-import type { User, Community } from "@/types"
-import { Award, Settings, Users, Plus, X, Trash2 } from "lucide-react"
+import type { User, Community, CommunityCategory } from "@/types"
+import { Award, Settings, Users, Plus, X, Trash2, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useApiQuery } from "@/hooks/useApiQuery"
+import { useApiMutation } from "@/hooks/useApiMutation"
+import { communityService } from "@/services/communityService"
+import { userService } from "@/services/userService"
 
-interface ProfileProps {
-  user: User
-  communities: Community[]
-  onCreateCommunity?: (community: Omit<Community, "id" | "members" | "joined">) => void
-  onDeleteCommunity?: (communityId: string) => void
-  onNavigateToCommunity?: (tabId: string, community?: Community) => void
-}
-
-export function Profile({ user, communities, onCreateCommunity, onDeleteCommunity, onNavigateToCommunity }: ProfileProps) {
+export function Profile() {
+  const { user: authUser } = useAuth()
+  
+  // Fetch user profile and communities
+  const { data: userProfile, isLoading: profileLoading, refetch: refetchProfile } = useApiQuery(
+    () => userService.getProfile(),
+    ['profile'],
+    { enabled: !!authUser }
+  )
+  
+  const { data: communities, isLoading: communitiesLoading, refetch: refetchCommunities } = useApiQuery(
+    () => communityService.getCommunities(),
+    ['communities'],
+    { enabled: !!authUser }
+  )
+  
+  // Mutations
+  const createCommunityMutation = useApiMutation(
+    (community: { name: string; description: string; category: CommunityCategory; avatar?: string }) => 
+      communityService.createCommunity(community)
+  )
+  
+  const deleteCommunityMutation = useApiMutation(
+    (communityId: string) => communityService.deleteCommunity(communityId)
+  )
+  
+  const user = userProfile || authUser
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const [newCommunity, setNewCommunity] = useState({
+  const [newCommunity, setNewCommunity] = useState<{
+    name: string
+    description: string
+    category: CommunityCategory | ""
+    avatar: string
+  }>({
     name: "",
     description: "",
     category: "",
@@ -22,23 +50,21 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
   })
   
   // Filter communities created by the user (assuming creator is the first member or has high member count)
-  const userCommunities = communities.filter(community => community.joined)
-  const totalAchievements = user.achievements.length
-  const averageGrade = user.academics.length > 0 
-    ? (user.academics.reduce((sum, course) => {
-        const gradePoints = { 'A': 4, 'A-': 3.7, 'B+': 3.3, 'B': 3, 'B-': 2.7, 'C+': 2.3, 'C': 2, 'C-': 1.7, 'D': 1, 'F': 0 }
-        return sum + (gradePoints[course.grade as keyof typeof gradePoints] || 0)
-      }, 0) / user.academics.length).toFixed(2)
-    : '0.00'
+  const userCommunities = communities?.filter(community => community.joined) || []
+  const totalAchievements = user?.achievements?.length || 0
 
   const handleCreateCommunity = () => {
     if (!newCommunity.name.trim() || !newCommunity.description.trim() || !newCommunity.category.trim()) return
 
-    onCreateCommunity?.({
+    createCommunityMutation.mutate({
       name: newCommunity.name.trim(),
       description: newCommunity.description.trim(),
-      category: newCommunity.category.trim(),
+      category: newCommunity.category as CommunityCategory,
       avatar: newCommunity.avatar.trim() || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newCommunity.name.trim())}`
+    }, {
+      onSuccess: () => {
+        refetchCommunities()
+      }
     })
 
     // Reset form
@@ -46,12 +72,25 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
     setShowCreateCommunity(false)
   }
 
-  const handleDeleteCommunity = (communityId: string) => {
-    onDeleteCommunity?.(communityId)
+  const handleDeleteCommunity = async (communityId: string) => {
+    await deleteCommunityMutation.mutateAsync(communityId)
+    refetchCommunities()
     setShowDeleteConfirm(null)
   }
 
-  const communityToDelete = showDeleteConfirm ? communities.find(c => c.id === showDeleteConfirm) : null
+  const communityToDelete = showDeleteConfirm && communities ? communities.find(c => c.id === showDeleteConfirm) : null
+  
+  // Loading state
+  if (profileLoading || communitiesLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-3">
+          <Loader2 className="animate-spin h-12 w-12 text-purple-600 mx-auto" />
+          <p className="text-gray-500 dark:text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -69,7 +108,7 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
             <h1 className="text-4xl font-bold mb-2">{user.name}</h1>
             <p className="text-white/90 text-lg">{user.email}</p>
             <p className="text-sm text-white/70 mt-2">
-              Member since {new Date(user.joinedDate).toLocaleDateString()}
+              Member since {new Date(user.createdAt).toLocaleDateString()}
             </p>
             <div className="mt-4 flex flex-wrap gap-4">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
@@ -81,7 +120,7 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
                 <span className="text-sm ml-1 text-white/90">Achievements</span>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
-                <span className="font-bold">{user.gpa}</span>
+                <span className="font-bold">{user.stats?.averageGPA?.toFixed(2) || '0.00'}</span>
                 <span className="text-sm ml-1 text-white/90">GPA</span>
               </div>
             </div>
@@ -105,7 +144,7 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
                 <div>
                   <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{ach.title}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {new Date(ach.dateEarned).toLocaleDateString()}
+                    {new Date(ach.unlockedAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -158,7 +197,10 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
               <div 
                 key={community.id} 
                 className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 border border-gray-200 dark:border-slate-600 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => onNavigateToCommunity?.("community", community)}
+                onClick={() => {
+                  // Navigation to community can be handled by parent component or router
+                  console.log('Navigate to community:', community.id)
+                }}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -245,7 +287,7 @@ export function Profile({ user, communities, onCreateCommunity, onDeleteCommunit
                   </label>
                   <select
                     value={newCommunity.category}
-                    onChange={(e) => setNewCommunity(prev => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) => setNewCommunity(prev => ({ ...prev, category: e.target.value as CommunityCategory | "" }))}
                     className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select a category</option>

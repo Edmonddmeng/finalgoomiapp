@@ -1,32 +1,19 @@
 "use client"
 import { useState } from "react"
-import type { User, Activity, Task } from "@/types"
-import { ChevronLeft, Calendar, Clock, Briefcase, TrendingUp, BookOpen, Sparkles, Save } from "lucide-react"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { Activity, Task } from "@/types"
+import { ChevronLeft, Calendar, Clock, Briefcase, TrendingUp, BookOpen, Sparkles, Save, Loader2 } from "lucide-react"
+import { activityService } from "@/services/activityService"
+import { useApiQuery, useApiMutation } from "@/hooks/useApiQuery"
 
 interface ActivityDetailsProps {
-  user: User
   activity: Activity
   tasks: Task[]
   onBack: () => void
 }
 
-interface ActivityInsight {
-  id: string
-  activityId: string
-  content: string
-  timestamp: string
-}
-
-interface AIInsight {
-  id: string
-  activityId: string
-  content: string
-  timestamp: string
-}
-
-export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetailsProps) {
+export function ActivityDetails({ activity, tasks, onBack }: ActivityDetailsProps) {
   const relatedTasks = tasks.filter((task) => 
+    task.relatedActivityId === activity.id ||
     task.title.toLowerCase().includes(activity.name.toLowerCase())
   )
   
@@ -35,43 +22,60 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
     ? Math.round((completedTasks / relatedTasks.length) * 100) 
     : 0
 
-  const [personalInsights, setPersonalInsights] = useLocalStorage<ActivityInsight[]>(`insights-${activity.id}`, [])
   const [currentInsight, setCurrentInsight] = useState("")
-  const [aiInsights, setAiInsights] = useLocalStorage<AIInsight[]>(`ai-insights-${activity.id}`, [])
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+
+  // Fetch insights
+  const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = useApiQuery(
+    () => activityService.getInsights(activity.id),
+    [activity.id]
+  )
+
+  // Add personal insight mutation
+  const { mutate: addInsight, isLoading: addingInsight } = useApiMutation(
+    (content: string) => activityService.addPersonalInsight(activity.id, content),
+    {
+      onSuccess: () => {
+        setCurrentInsight("")
+        refetchInsights()
+      }
+    }
+  )
+
+  // Generate AI insight mutation
+  const { mutate: generateAI, isLoading: generatingAI } = useApiMutation(
+    () => activityService.generateAIInsight(activity.id),
+    {
+      onSuccess: () => {
+        refetchInsights()
+      }
+    }
+  )
 
   const handleSaveInsight = () => {
     if (currentInsight.trim()) {
-      const newInsight: ActivityInsight = {
-        id: Date.now().toString(),
-        activityId: activity.id,
-        content: currentInsight,
-        timestamp: new Date().toISOString()
-      }
-      setPersonalInsights([...personalInsights, newInsight])
-      setCurrentInsight("")
+      addInsight(currentInsight)
     }
   }
 
-  const generateAIInsight = () => {
-    setIsGeneratingAI(true)
-    // Simulate AI generation
-    setTimeout(() => {
-      const insights = [
-        `Based on your ${engagementLevel}% engagement rate, you're showing ${engagementLevel > 70 ? 'excellent' : engagementLevel > 40 ? 'good' : 'room for improvement in'} commitment to ${activity.name}. ${engagementLevel < 50 ? 'Consider setting more specific, achievable tasks to boost your involvement.' : 'Keep up the great work!'}`,
-        `Your ${activity.hours} hours per week dedication to ${activity.name} demonstrates ${activity.hours > 10 ? 'significant' : activity.hours > 5 ? 'moderate' : 'light'} time investment. ${activity.hours < 5 ? 'Consider if you can allocate more time to maximize your learning.' : 'This level of commitment can lead to meaningful skill development.'}`,
-        `Having started ${activity.name} on ${new Date(activity.startDate).toLocaleDateString()}, you've been engaged for ${Math.floor((Date.now() - new Date(activity.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30))} months. This sustained involvement shows dedication to personal growth.`
-      ]
-      
-      const newAIInsight: AIInsight = {
-        id: Date.now().toString(),
-        activityId: activity.id,
-        content: insights[Math.floor(Math.random() * insights.length)],
-        timestamp: new Date().toISOString()
-      }
-      setAiInsights([...aiInsights, newAIInsight])
-      setIsGeneratingAI(false)
-    }, 1500)
+  const getDuration = () => {
+    if (!activity.endDate) return "Ongoing"
+    const start = new Date(activity.startDate)
+    const end = new Date(activity.endDate)
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    return `${months} months`
+  }
+
+  const getCategoryColor = () => {
+    const colors: Record<string, string> = {
+      sports: "from-blue-500 to-indigo-600",
+      arts: "from-purple-500 to-pink-600",
+      volunteer: "from-green-500 to-teal-600",
+      leadership: "from-orange-500 to-red-600",
+      academic: "from-indigo-500 to-purple-600",
+      professional: "from-gray-600 to-gray-800",
+      hobby: "from-yellow-500 to-orange-600"
+    }
+    return colors[activity.category] || "from-gray-500 to-gray-700"
   }
 
   const getEngagementColor = (level: number) => {
@@ -81,16 +85,16 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
     return "bg-red-500"
   }
 
-  const getActivityColor = (category: string) => {
-    const colors = {
-      academic: "from-blue-500 to-indigo-600",
-      extracurricular: "from-purple-500 to-pink-600",
-      leadership: "from-amber-500 to-orange-600",
-      volunteer: "from-green-500 to-teal-600",
-      sports: "from-red-500 to-rose-600"
-    }
-    return colors[category as keyof typeof colors] || "from-gray-500 to-slate-600"
+  if (insightsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin h-8 w-8 text-purple-600" />
+      </div>
+    )
   }
+
+  const personalInsights = insights?.personalInsights || []
+  const aiInsights = insights?.aiInsights || []
 
   return (
     <div className="space-y-6">
@@ -103,37 +107,43 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
       </button>
 
       {/* Hero Section */}
-      <div className={`bg-gradient-to-r ${getActivityColor(activity.category)} rounded-3xl p-8 text-white shadow-xl`}>
+      <div className={`bg-gradient-to-r ${getCategoryColor()} rounded-3xl p-8 text-white shadow-xl`}>
         <div className="flex items-start justify-between mb-6">
           <div>
-            <p className="text-sm font-medium text-white/80 capitalize mb-1">{activity.category}</p>
+            <p className="text-sm font-medium text-white/80 mb-1 capitalize">
+              {activity.category} Activity
+            </p>
             <h2 className="text-3xl font-bold mb-2">{activity.name}</h2>
-            {activity.position && (
-              <p className="text-white/90 flex items-center gap-2">
-                <Briefcase size={16} />
-                {activity.position}
-              </p>
+            {activity.role && (
+              <p className="text-lg text-white/90">{activity.role}</p>
             )}
           </div>
-          <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium">
-            Activity
+          <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium border border-white/30">
+            {activity.isActive ? "Active" : "Completed"}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock size={20} />
-              <span className="text-lg font-semibold">{activity.hours} hours / week</span>
-            </div>
-            <p className="text-sm text-white/80">Time commitment</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/20">
             <div className="flex items-center gap-3 mb-2">
               <Calendar size={20} />
-              <span className="text-lg font-semibold">{new Date(activity.startDate).toLocaleDateString()}</span>
+              <span className="text-sm font-semibold">Duration</span>
             </div>
-            <p className="text-sm text-white/80">Started on</p>
+            <p className="text-lg">{getDuration()}</p>
+          </div>
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock size={20} />
+              <span className="text-sm font-semibold">Weekly Commitment</span>
+            </div>
+            <p className="text-lg">{activity.hoursPerWeek || 0} hours</p>
+          </div>
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+            <div className="flex items-center gap-3 mb-2">
+              <Briefcase size={20} />
+              <span className="text-sm font-semibold">Start Date</span>
+            </div>
+            <p className="text-lg">{new Date(activity.startDate).toLocaleDateString()}</p>
           </div>
         </div>
       </div>
@@ -141,14 +151,14 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
       {/* Engagement Level Tracker */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="text-purple-600 dark:text-purple-400" size={24} />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Engagement Level</h3>
+          <TrendingUp className="text-yellow-600 dark:text-yellow-400" size={24} />
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Activity Engagement</h3>
         </div>
         
         <div className="space-y-4">
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Task Completion Rate</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">Related Task Completion</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">{engagementLevel}%</span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
@@ -172,6 +182,21 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
         </div>
       </div>
 
+      {/* Achievements Section */}
+      {activity.achievements && activity.achievements.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Key Achievements</h3>
+          <ul className="space-y-2">
+            {activity.achievements.map((achievement, index) => (
+              <li key={index} className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2"></div>
+                <span className="text-gray-700 dark:text-gray-300">{achievement}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Related Tasks Section */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Related Tasks</h3>
@@ -188,7 +213,7 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
             ))}
           </ul>
         ) : (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-4">No tasks related to this activity.</p>
+          <p className="text-center text-gray-500 dark:text-gray-400 py-4">No related tasks found for this activity.</p>
         )}
       </div>
 
@@ -196,7 +221,7 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-4">
           <BookOpen className="text-blue-600 dark:text-blue-400" size={24} />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Personal Insights</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Activity Reflections</h3>
         </div>
         
         <div className="space-y-4">
@@ -204,16 +229,20 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
             <textarea
               value={currentInsight}
               onChange={(e) => setCurrentInsight(e.target.value)}
-              placeholder="Record your thoughts, learnings, or reflections about this activity..."
+              placeholder="Share your experiences, growth, or impact from this activity..."
               className="flex-1 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none"
               rows={3}
             />
             <button
               onClick={handleSaveInsight}
-              disabled={!currentInsight.trim()}
+              disabled={!currentInsight.trim() || addingInsight}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 transition-colors flex items-center gap-2 h-fit"
             >
-              <Save size={16} />
+              {addingInsight ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Save size={16} />
+              )}
               Save
             </button>
           </div>
@@ -237,20 +266,23 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Sparkles className="text-purple-600 dark:text-purple-400" size={24} />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">AI Performance Insights</h3>
+            <Sparkles className="text-yellow-600 dark:text-yellow-400" size={24} />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">AI Activity Analysis</h3>
           </div>
           <button
-            onClick={generateAIInsight}
-            disabled={isGeneratingAI}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 transition-colors flex items-center gap-2"
+            onClick={() => generateAI()}
+            disabled={generatingAI}
+            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 transition-colors flex items-center gap-2"
           >
-            {isGeneratingAI ? (
-              <>Generating...</>
+            {generatingAI ? (
+              <>
+                <Loader2 className="animate-spin" size={16} />
+                Analyzing...
+              </>
             ) : (
               <>
                 <Sparkles size={16} />
-                Generate Insight
+                Generate Analysis
               </>
             )}
           </button>
@@ -259,18 +291,28 @@ export function ActivityDetails({ user, activity, tasks, onBack }: ActivityDetai
         {aiInsights.length > 0 ? (
           <div className="space-y-3">
             {aiInsights.map((insight) => (
-              <div key={insight.id} className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <div key={insight.id} className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <p className="text-gray-800 dark:text-gray-200">{insight.content}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Generated on {new Date(insight.timestamp).toLocaleString()}
+                  Generated on {new Date(insight.generatedAt).toLocaleString()}
                 </p>
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400 mb-2">No AI insights generated yet</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">Click the button above to get personalized insights about your activity performance</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-2">No AI analysis generated yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Click the button above to get insights about your activity impact and growth opportunities</p>
+          </div>
+        )}
+      </div>
+
+      {/* Activity Details Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+        {activity.description && (
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Description</h3>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{activity.description}</p>
           </div>
         )}
       </div>

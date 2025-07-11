@@ -1,5 +1,5 @@
 "use client"
-import { LayoutDashboard, Milestone, Users, User, MessageSquare, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, Milestone, Users, User, MessageSquare, Settings, LogOut, ClipboardCheck } from "lucide-react"
 
 interface TabNavigationProps {
   activeTab: string
@@ -11,6 +11,7 @@ interface TabNavigationProps {
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "roadmap", label: "Roadmap", icon: Milestone },
+  { id: "evaluations", label: "Evaluations", icon: ClipboardCheck },
   { id: "community", label: "Community", icon: Users },
   { id: "profile", label: "Profile", icon: User },
 ]
@@ -52,7 +53,14 @@ export function TabNavigation({ activeTab, onTabChange, onChatToggle, isChatOpen
           <MessageSquare size={20} />
           <span>AI Advisor</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white">
+        <button 
+          onClick={() => onTabChange("settings")}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === "settings"
+              ? "bg-purple-500 text-white shadow-md"
+              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
           <Settings size={20} />
           <span>Settings</span>
         </button>

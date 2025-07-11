@@ -74,3 +74,41 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Forest animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  33% {
+    transform: translateX(30px) translateY(-10px);
+  }
+  66% {
+    transform: translateX(-20px) translateY(5px);
+  }
+}
+
+@keyframes fly {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(100px) translateY(-20px);
+  }
+  50% {
+    transform: translateX(200px) translateY(10px);
+  }
+  75% {
+    transform: translateX(150px) translateY(-15px);
+  }
+}
+
+/* Mosaic animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%);
+  }
+}

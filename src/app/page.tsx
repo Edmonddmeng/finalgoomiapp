@@ -1,164 +1,36 @@
 "use client"
 
 import { useState } from "react"
+import { AuthProvider } from "@/contexts/AuthContext"
 import { TabNavigation } from "@/components/Layout/TabNavigation"
 import { Dashboard } from "@/components/Dashboard/Dashboard"
 import { Roadmap } from "@/components/Roadmap/Roadmap"
 import { Community } from "@/components/Community/Community"
 import { Profile } from "@/components/Profile/Profile"
+import { Settings } from "@/components/Settings/Settings"
+import { Evaluations } from "@/components/Evaluations/Evaluations"
 import { AIChat } from "@/components/AIChat/AIChat"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
-import { mockUser, mockTasks, mockEvents, mockCommunities, mockPosts } from "@/lib/mockData"
-import type { Task, Community as CommunityType, CommunityPost } from "@/types"
 
-export default function Home() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [user, setUser] = useLocalStorage("user", mockUser)
-  const [tasks, setTasks] = useLocalStorage<Task[]>("tasks", mockTasks)
-  const [communities, setCommunities] = useLocalStorage<CommunityType[]>("communities", mockCommunities)
-  const [posts, setPosts] = useLocalStorage<CommunityPost[]>("posts", mockPosts)
-  const [userVotes, setUserVotes] = useLocalStorage<Record<string, "up" | "down">>("userVotes", {})
-  const [selectedCommunityFromProfile, setSelectedCommunityFromProfile] = useState<CommunityType | null>(null)
-
-  const handleTaskToggle = (taskId: string) => {
-    setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task)))
-  }
-
-  const handleTaskCreate = (newTask: Omit<Task, "id">) => {
-    const task: Task = {
-      ...newTask,
-      id: Date.now().toString(),
-    }
-    setTasks((prev) => [task, ...prev])
-  }
-
-  const handleTaskDelete = (taskId: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== taskId))
-  }
-
-  const handleJoinCommunity = (communityId: string) => {
-    setCommunities((prev) =>
-      prev.map((community) => (community.id === communityId ? { ...community, joined: !community.joined } : community)),
-    )
-  }
-
-  const handleVotePost = (postId: string, voteType: "up" | "down") => {
-    const existingVote = userVotes[postId]
-    
-    // If user is clicking the same vote type, remove their vote
-    if (existingVote === voteType) {
-      setUserVotes((prev) => {
-        const newVotes = { ...prev }
-        delete newVotes[postId]
-        return newVotes
-      })
-      
-      setPosts((prev) =>
-        prev.map((post) => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              upvotes: voteType === "up" ? post.upvotes - 1 : post.upvotes,
-              downvotes: voteType === "down" ? post.downvotes - 1 : post.downvotes,
-            }
-          }
-          return post
-        }),
-      )
-    } else {
-      // Update or add the vote
-      setUserVotes((prev) => ({ ...prev, [postId]: voteType }))
-      
-      setPosts((prev) =>
-        prev.map((post) => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              upvotes: voteType === "up" ? post.upvotes + 1 : (existingVote === "up" ? post.upvotes - 1 : post.upvotes),
-              downvotes: voteType === "down" ? post.downvotes + 1 : (existingVote === "down" ? post.downvotes - 1 : post.downvotes),
-            }
-          }
-          return post
-        }),
-      )
-    }
-  }
-
-  const handleCreatePost = (newPost: Omit<CommunityPost, "id" | "createdAt" | "upvotes" | "downvotes" | "comments">) => {
-    const post: CommunityPost = {
-      ...newPost,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      upvotes: 0,
-      downvotes: 0,
-      comments: [],
-    }
-    setPosts((prev) => [post, ...prev])
-  }
-
-  const handleCreateCommunity = (newCommunity: Omit<CommunityType, "id" | "members" | "joined">) => {
-    const community: CommunityType = {
-      ...newCommunity,
-      id: Date.now().toString(),
-      members: 1,
-      joined: true,
-    }
-    setCommunities((prev) => [community, ...prev])
-  }
-
-  const handleDeleteCommunity = (communityId: string) => {
-    setCommunities((prev) => prev.filter((community) => community.id !== communityId))
-    // Also remove posts from that community
-    setPosts((prev) => prev.filter((post) => post.communityId !== communityId))
-  }
-
-  const handleNavigateToCommunity = (tabId: string, community?: CommunityType) => {
-    if (community) {
-      setSelectedCommunityFromProfile(community)
-    }
-    setActiveTab(tabId)
-  }
 
   const renderActiveTab = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard user={user} tasks={tasks} setUser={setUser} />
+        return <Dashboard />
       case "roadmap":
-        return (
-          <Roadmap
-            progressLevel={user.progressLevel}
-            tasks={tasks}
-            events={mockEvents}
-            onTaskToggle={handleTaskToggle}
-            onTaskCreate={handleTaskCreate}
-            onTaskDelete={handleTaskDelete}
-          />
-        )
+        return <Roadmap />
       case "community":
-        return (
-          <Community
-            communities={communities}
-            posts={posts}
-            userVotes={userVotes}
-            selectedCommunity={selectedCommunityFromProfile}
-            onJoinCommunity={handleJoinCommunity}
-            onVotePost={handleVotePost}
-            onCreatePost={handleCreatePost}
-            onCreateCommunity={handleCreateCommunity}
-            onClearSelectedCommunity={() => setSelectedCommunityFromProfile(null)}
-          />
-        )
+        return <Community />
       case "profile":
-        return <Profile 
-          user={user} 
-          communities={communities} 
-          onCreateCommunity={handleCreateCommunity} 
-          onDeleteCommunity={handleDeleteCommunity}
-          onNavigateToCommunity={handleNavigateToCommunity}
-        />
+        return <Profile />
+      case "evaluations":
+        return <Evaluations />
+      case "settings":
+        return <Settings />
       default:
-        return <Dashboard user={user} tasks={tasks} setUser={setUser} />
+        return <Dashboard />
     }
   }
 
@@ -180,5 +52,13 @@ export default function Home() {
       {/* AI Chat */}
       <AIChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }

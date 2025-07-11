@@ -38,14 +38,14 @@ export function PostCard({ post, onVote, userVote }: PostCardProps) {
       <div className="flex-1">
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
           <Image
-            src={post.authorAvatar || "/placeholder.svg"}
-            alt={post.author}
+            src={post.author.avatar || "/placeholder.svg"}
+            alt={post.author.name}
             width={20}
             height={20}
             className="rounded-full"
           />
           <span>
-            Posted by <span className="font-medium text-gray-700 dark:text-gray-300">{post.author}</span>
+            Posted by <span className="font-medium text-gray-700 dark:text-gray-300">{post.author.name}</span>
           </span>
           <span>•</span>
           <span>{new Date(post.createdAt).toLocaleDateString()}</span>
@@ -58,7 +58,7 @@ export function PostCard({ post, onVote, userVote }: PostCardProps) {
             <span>{post.comments.length} Comments</span>
           </div>
           <div className="flex gap-2">
-            {post.tags.map((tag) => (
+            {post.tags?.map((tag) => (
               <span
                 key={tag}
                 className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-full"

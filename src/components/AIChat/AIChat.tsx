@@ -4,7 +4,10 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Send, Mic, X } from "lucide-react"
 import { ChatBubble } from "./ChatBubble"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { useAuth } from "@/contexts/AuthContext"
+import { useApiQuery } from "@/hooks/useApiQuery"
+import { competitionService } from "@/services/competition.service"
+import { academicService } from "@/services/academicService"
 
 interface ChatMessage {
   id: string
@@ -18,12 +21,7 @@ interface AIChatProps {
   onClose: () => void
 }
 
-interface PersonalInsight {
-  id: string
-  content: string
-  date: string
-  subject?: string
-}
+// Removed - using AcademicInsight from types instead
 
 interface CompetitionInsight {
   id: string
@@ -47,8 +45,24 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [inputMessage, setInputMessage] = useState("")
   const [isListening, setIsListening] = useState(false)
-  const [personalInsights] = useLocalStorage<PersonalInsight[]>("personalInsights", [])
-  const [competitionInsights] = useLocalStorage<CompetitionInsight[]>("competitionInsights", [])
+  const { user } = useAuth()
+  
+  // Fetch insights from API
+  const { data: academicInsights } = useApiQuery(
+    () => academicService.getInsights(),
+    ['academic-insights'],
+    { enabled: !!user && isOpen }
+  )
+  
+  const { data: competitionInsights } = useApiQuery(
+    () => competitionService.getAllInsights(),
+    ['competition-insights'],
+    { enabled: !!user && isOpen }
+  )
+  
+  const personalInsights = academicInsights || []
+  const competitionInsightsData = competitionInsights || []
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -88,20 +102,18 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
     const input = userInput.toLowerCase()
 
     if (input.includes("insight") || input.includes("thought") || input.includes("reflection")) {
-      const totalInsights = personalInsights.length + competitionInsights.length
+      const totalInsights = personalInsights.length + competitionInsightsData.length
 
       if (totalInsights > 0) {
         let response = `I can see you have ${totalInsights} personal insight${totalInsights > 1 ? "s" : ""} recorded`
 
         if (personalInsights.length > 0) {
-          const recentAcademicInsight = personalInsights[0]
-          const subjectText = recentAcademicInsight.subject ? ` about ${recentAcademicInsight.subject}` : ""
-          response += ` including academic reflections${subjectText}`
+          response += ` including academic reflections`
         }
 
-        if (competitionInsights.length > 0) {
-          const recentCompetitionInsight = competitionInsights[0]
-          response += ` and competition insights about ${recentCompetitionInsight.competitionName}`
+        if (competitionInsightsData.length > 0) {
+          const recentCompetitionInsight = competitionInsightsData[0]
+          response += ` and competition insights`
         }
 
         response += `. Your self-reflection shows great awareness. Based on these insights, I recommend focusing on the patterns you've identified. Would you like specific strategies for the areas you've mentioned?`
@@ -112,16 +124,15 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
     }
 
     if (input.includes("competition") || input.includes("contest") || input.includes("tournament")) {
-      if (competitionInsights.length > 0) {
-        const recentCompetitionInsight = competitionInsights[0]
-        return `I can see from your competition insights about ${recentCompetitionInsight.competitionName} that you're actively reflecting on your performance. This kind of analysis is crucial for improvement. Based on your insights, I recommend creating specific preparation strategies and tracking your progress. Would you like help developing a competition preparation plan?`
+      if (competitionInsightsData.length > 0) {
+        return `I can see from your competition insights that you're actively reflecting on your performance. This kind of analysis is crucial for improvement. Based on your insights, I recommend creating specific preparation strategies and tracking your progress. Would you like help developing a competition preparation plan?`
       } else {
         return "Competition preparation is key to success! I can help you develop strategies for training, mental preparation, and performance optimization. Consider tracking your thoughts and reflections in the Competition Details section to help me provide more personalized advice. What competition are you preparing for?"
       }
     }
 
     if (input.includes("schedule") || input.includes("calendar")) {
-      const hasInsights = personalInsights.length > 0 || competitionInsights.length > 0
+      const hasInsights = personalInsights.length > 0 || competitionInsightsData.length > 0
       const insightContext = hasInsights
         ? " Based on your personal reflections, I can see you're focused on improvement."
         : ""
@@ -129,16 +140,12 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
     }
 
     if (input.includes("study") || input.includes("tips")) {
-      const subjectInsights = personalInsights.filter((insight) => insight.subject)
-      const subjectContext =
-        subjectInsights.length > 0
-          ? ` I noticed from your insights that you've been reflecting on ${subjectInsights[0].subject}.`
-          : ""
-      return `Based on your learning patterns${subjectContext}, I suggest using the Pomodoro technique for your upcoming Chemistry exam. You tend to perform better with 25-minute focused sessions. Also, reviewing your AP Chemistry notes from last month could help reinforce key concepts.`
+      return `Based on your learning patterns, I suggest using the Pomodoro technique for your upcoming Chemistry exam. You tend to perform better with 25-minute focused sessions. Also, reviewing your AP Chemistry notes from last month could help reinforce key concepts.`
     }
 
     if (input.includes("progress") || input.includes("goals")) {
-      const progressInsights = [...personalInsights, ...competitionInsights].filter(
+      const allInsights = [...personalInsights, ...competitionInsightsData]
+      const progressInsights = allInsights.filter(
         (insight) =>
           insight.content.toLowerCase().includes("goal") ||
           insight.content.toLowerCase().includes("improve") ||

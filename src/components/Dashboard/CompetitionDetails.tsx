@@ -1,33 +1,20 @@
 "use client"
 import { useState } from "react"
-import type { User, Competition, Task, ActivityCategory } from "@/types"
-import { ChevronLeft, Trophy, Calendar, TrendingUp, BookOpen, Sparkles, Save } from "lucide-react"
+import { Competition, Task } from "@/types"
+import { ChevronLeft, Trophy, Calendar, TrendingUp, BookOpen, Sparkles, Save, Loader2 } from "lucide-react"
 import { categoryDisplayNames, competitionCategoryColors, categoryBgColors } from "@/lib/categoryHelpers"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { competitionService } from "@/services/competitionService"
+import { useApiQuery, useApiMutation } from "@/hooks/useApiQuery"
 
 interface CompetitionDetailsProps {
-  user: User
   competition: Competition
   tasks: Task[]
   onBack: () => void
 }
 
-interface CompetitionInsight {
-  id: string
-  competitionId: string
-  content: string
-  timestamp: string
-}
-
-interface CompetitionAIInsight {
-  id: string
-  competitionId: string
-  content: string
-  timestamp: string
-}
-
-export function CompetitionDetails({ user, competition, tasks, onBack }: CompetitionDetailsProps) {
+export function CompetitionDetails({ competition, tasks, onBack }: CompetitionDetailsProps) {
   const relatedTasks = tasks.filter((task) => 
+    task.relatedCompetitionId === competition.id ||
     task.title.toLowerCase().includes(competition.name.toLowerCase())
   )
   
@@ -36,43 +23,39 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
     ? Math.round((completedTasks / relatedTasks.length) * 100) 
     : 0
 
-  const [personalInsights, setPersonalInsights] = useLocalStorage<CompetitionInsight[]>(`comp-insights-${competition.id}`, [])
   const [currentInsight, setCurrentInsight] = useState("")
-  const [aiInsights, setAiInsights] = useLocalStorage<CompetitionAIInsight[]>(`comp-ai-insights-${competition.id}`, [])
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+
+  // Fetch insights
+  const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = useApiQuery(
+    () => competitionService.getInsights(competition.id),
+    [competition.id]
+  )
+
+  // Add personal insight mutation
+  const { mutate: addInsight, isLoading: addingInsight } = useApiMutation(
+    (content: string) => competitionService.addPersonalInsight(competition.id, content),
+    {
+      onSuccess: () => {
+        setCurrentInsight("")
+        refetchInsights()
+      }
+    }
+  )
+
+  // Generate AI insight mutation
+  const { mutate: generateAI, isLoading: generatingAI } = useApiMutation(
+    () => competitionService.generateAIInsight(competition.id),
+    {
+      onSuccess: () => {
+        refetchInsights()
+      }
+    }
+  )
 
   const handleSaveInsight = () => {
     if (currentInsight.trim()) {
-      const newInsight: CompetitionInsight = {
-        id: Date.now().toString(),
-        competitionId: competition.id,
-        content: currentInsight,
-        timestamp: new Date().toISOString()
-      }
-      setPersonalInsights([...personalInsights, newInsight])
-      setCurrentInsight("")
+      addInsight(currentInsight)
     }
-  }
-
-  const generateAIInsight = () => {
-    setIsGeneratingAI(true)
-    // Simulate AI generation for competitions
-    setTimeout(() => {
-      const insights = [
-        `Your ${competition.placement} in ${competition.name} demonstrates strong performance in ${categoryDisplayNames[competition.category]}. ${engagementLevel > 50 ? 'Your high task completion rate shows excellent preparation.' : 'Consider increasing your preparation efforts for future competitions.'}`,
-        `Competing in ${categoryDisplayNames[competition.category]} events like ${competition.name} enhances your profile. Your ${competition.placement} achievement can be highlighted in college applications and resumes.`,
-        `Based on your competition date (${new Date(competition.date).toLocaleDateString()}), you've had time to reflect on this experience. Consider how this ${competition.placement} finish has influenced your goals in ${categoryDisplayNames[competition.category]}.`
-      ]
-      
-      const newAIInsight: CompetitionAIInsight = {
-        id: Date.now().toString(),
-        competitionId: competition.id,
-        content: insights[Math.floor(Math.random() * insights.length)],
-        timestamp: new Date().toISOString()
-      }
-      setAiInsights([...aiInsights, newAIInsight])
-      setIsGeneratingAI(false)
-    }, 1500)
   }
 
   const getEngagementColor = (level: number) => {
@@ -81,6 +64,17 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
     if (level >= 40) return "bg-yellow-500"
     return "bg-red-500"
   }
+
+  if (insightsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin h-8 w-8 text-purple-600" />
+      </div>
+    )
+  }
+
+  const personalInsights = insights?.personalInsights || []
+  const aiInsights = insights?.aiInsights || []
 
   return (
     <div className="space-y-6">
@@ -92,8 +86,8 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
         <span>Back to Dashboard</span>
       </button>
 
-      {/* Hero Section with consistent styling */}
-      <div className={`bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-8 text-white shadow-xl`}>
+      {/* Hero Section */}
+      <div className={`bg-gradient-to-r ${competitionCategoryColors[competition.category]} rounded-3xl p-8 text-white shadow-xl`}>
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-sm font-medium text-white/80 mb-1">
@@ -101,7 +95,7 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             </p>
             <h2 className="text-3xl font-bold mb-2">{competition.name}</h2>
           </div>
-          <span className="px-4 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-sm rounded-full font-medium border border-white/30">
+          <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium border border-white/30">
             Competition
           </span>
         </div>
@@ -196,10 +190,14 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             />
             <button
               onClick={handleSaveInsight}
-              disabled={!currentInsight.trim()}
+              disabled={!currentInsight.trim() || addingInsight}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 transition-colors flex items-center gap-2 h-fit"
             >
-              <Save size={16} />
+              {addingInsight ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Save size={16} />
+              )}
               Save
             </button>
           </div>
@@ -227,12 +225,15 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">AI Competition Analysis</h3>
           </div>
           <button
-            onClick={generateAIInsight}
-            disabled={isGeneratingAI}
+            onClick={() => generateAI()}
+            disabled={generatingAI}
             className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 transition-colors flex items-center gap-2"
           >
-            {isGeneratingAI ? (
-              <>Analyzing...</>
+            {generatingAI ? (
+              <>
+                <Loader2 className="animate-spin" size={16} />
+                Analyzing...
+              </>
             ) : (
               <>
                 <Sparkles size={16} />
@@ -248,7 +249,7 @@ export function CompetitionDetails({ user, competition, tasks, onBack }: Competi
               <div key={insight.id} className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <p className="text-gray-800 dark:text-gray-200">{insight.content}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Generated on {new Date(insight.timestamp).toLocaleString()}
+                  Generated on {new Date(insight.generatedAt).toLocaleString()}
                 </p>
               </div>
             ))}

@@ -12,7 +12,7 @@ interface CommunityViewProps {
   onBack: () => void
   onJoin: (communityId: string) => void
   onVotePost: (postId: string, voteType: "up" | "down") => void
-  onCreatePost: (post: Omit<CommunityPost, "id" | "createdAt" | "upvotes" | "downvotes" | "comments">) => void
+  onCreatePost: (post: { title: string; content: string; communityId: string; tags?: string[] }) => void
 }
 
 export function CommunityView({ 
@@ -69,9 +69,6 @@ export function CommunityView({
     onCreatePost({
       title: newPost.title.trim(),
       content: newPost.content.trim(),
-      author: "Current User", // This would come from user context
-      authorAvatar: "/placeholder-user.jpg",
-      community: community.name,
       communityId: community.id,
       tags: newPost.tags
     })
