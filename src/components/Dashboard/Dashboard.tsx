@@ -17,6 +17,7 @@ type DetailView = "academic" | "competition" | "activity" | null
 
 export function Dashboard() {
   const { user, isLoading: userLoading } = useAuth()
+
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: tasksData, isLoading: tasksLoading } = useTasks({ status: 'all' })
   const [selectedDetail, setSelectedDetail] = useState<DetailView>(null)
@@ -36,6 +37,8 @@ export function Dashboard() {
     )
   }
 
+  console.log("user details are: ", localStorage.getItem("goomi_user"));
+  console.log("user details are updated: ", user);
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">

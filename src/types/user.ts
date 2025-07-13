@@ -16,6 +16,8 @@ export interface User {
   stats: UserStats
   createdAt: string
   updatedAt: string
+  sat_score?: number
+  act_score?: number
 }
 
 export interface UserStats {

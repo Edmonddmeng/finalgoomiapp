@@ -27,7 +27,7 @@ export class ApiError extends Error {
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://goomi-community-backend.onrender.com/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -178,12 +178,17 @@ apiClient.interceptors.response.use(
         )
     }
 
-    // Default error
-    throw new ApiError(
-      data?.error?.message || 'An unexpected error occurred.',
-      data?.error?.code || 'UNKNOWN_ERROR',
-      data?.error?.details
-    )
+const fallbackMessage =
+  typeof data?.error === 'string'
+    ? data.error
+    : data?.error?.message || data?.message || 'An unexpected error occurred.'
+
+throw new ApiError(
+  fallbackMessage,
+  data?.error?.code || 'UNKNOWN_ERROR',
+  data?.error?.details
+)
+
   }
 )
 

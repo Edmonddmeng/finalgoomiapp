@@ -17,14 +17,12 @@ import {
 } from "@/hooks/useAcademics"
 import { useDashboardStats } from "@/hooks/useUser"
 import type { Academic, CreateCourseRequest, UpdateCourseRequest, AcademicTerm } from "@/types/academic"
+import { apiClient } from "@/lib/apiClient"
+import axios from "axios"
 
 interface AcademicDetailsProps {
   onBack: () => void
 }
-
-// Removed TermInfo interface - no longer needed
-
-// Removed local AcademicInsight interface - using from types/academic.ts
 
 export function AcademicDetails({ onBack }: AcademicDetailsProps) {
   const { user } = useAuth()
@@ -38,9 +36,30 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
     startDate: '',
     endDate: ''
   })
+
+  interface Course {
+  id: string;
+  course_Name: string;
+  grade: string;
+  category: string;
+  credits: number;
+  termId: string;
+}
+
+interface Term {
+  id: string;
+  name: string;
+  year: string;
+}
+
+
+
+const [allCourses, setAllCourses] = useState<Course[]>([]);
   
   // Academic insights
   const [currentInsight, setCurrentInsight] = useState("")
+  //  const { data: terms = [], loading: termsLoading } = useTerms(userId);
+  
   
   // API hooks
   const { data: terms, isLoading: termsLoading, refetch: refetchTerms } = useAcademicTerms()
@@ -48,17 +67,6 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
   const { data: dashboardStats } = useDashboardStats()
   const { data: insights, isLoading: insightsLoading } = useAcademicInsights()
   const { data: subjectAnalysisData, isLoading: subjectAnalysisLoading } = useSubjectAnalysis()
-  
-  // Selected term for filtering courses
-  const selectedTerm = terms?.[selectedTermIndex]
-  const { data: courses, isLoading: coursesLoading, refetch: refetchCourses } = useCourses(selectedTerm?.id)
-  
-  // Mutations
-  const createCourseMutation = useCreateCourse()
-  const updateCourseMutation = useUpdateCourse()
-  const deleteCourseMutation = useDeleteCourse()
-  const createInsightMutation = useCreateInsight()
-  const createTermMutation = useCreateTerm()
   
   // Sort terms by date
   const sortedTerms = useMemo(() => {
@@ -70,11 +78,22 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
     })
   }, [terms])
   
+  // Selected term for filtering courses
+  const selectedTerm = sortedTerms[selectedTermIndex]
+  const { data: courses, isLoading: coursesLoading, refetch: refetchCourses } = useCourses(user?.id || "", selectedTerm?.id)
+  
+  // Mutations
+  const createCourseMutation = useCreateCourse()
+  const updateCourseMutation = useUpdateCourse()
+  const deleteCourseMutation = useDeleteCourse()
+  const createInsightMutation = useCreateInsight()
+  const createTermMutation = useCreateTerm()
+  
   const currentTerm = sortedTerms[selectedTermIndex]
   
   // Courses for selected term
   const termAcademics = courses || []
-  
+
   // Calculate GPA for selected term
   const calculateTermGPA = (academics: Academic[]) => {
     if (academics.length === 0) return 0
@@ -103,6 +122,16 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
   const overallGPA = gpaStats?.cumulative || dashboardStats?.currentGPA || 0
   const gpaColor = overallGPA >= 3.5 ? "text-green-600" : overallGPA >= 3.0 ? "text-blue-600" : "text-yellow-600"
   const termGpaColor = termGPA >= 3.5 ? "text-green-600" : termGPA >= 3.0 ? "text-blue-600" : "text-yellow-600"
+
+  const predefinedTerms = [
+  { id: 'spring-2026', name: 'Spring', year: 2026 },
+  { id: 'summer-2026', name: 'Summer', year: 2026 },
+  { id: 'fall-2025', name: 'Fall', year: 2025 },
+  { id: 'winter-2026', name: 'Winter', year: 2026 },
+];
+
+
+
 
   const [newCourse, setNewCourse] = useState<Partial<Academic>>({
     subject: "",
@@ -146,46 +175,43 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
     }
   }
 
-  const handleAddCourse = async () => {
-    if (!newCourse.subject?.trim() || !currentTerm) return
-    
-    try {
-      const courseData: CreateCourseRequest = {
-        termId: currentTerm.id,
-        subject: newCourse.subject.trim(),
-        grade: newCourse.grade || "A",
-        credits: newCourse.credits || 3,
-        category: newCourse.category || categorizeSubject(newCourse.subject.trim())
-      }
-      
-      await createCourseMutation.mutateAsync(courseData)
-      await refetchCourses()
-      
-      setNewCourse({
-        subject: "",
-        grade: "A",
-        credits: 3,
-        termId: currentTerm.id,
-        category: undefined
-      })
-      setShowAddCourse(false)
-    } catch (error) {
-      console.error('Failed to add course:', error)
-    }
+const handleAddCourse = async () => {
+  const payload = {
+    course_Name: newCourse.subject,
+    grade: newCourse.grade,
+    credits: newCourse.credits,
+    termId: newCourse.termId,
+    category: newCourse.category,
+  };
+
+  try {
+    await apiClient.post('/users/user_academics', payload);
+    // refresh data, close modal, etc.
+  } catch (error) {
+    console.error("Failed to add course", error);
   }
+};
+
 
   const handleUpdateCourse = async () => {
     if (!editingCourse || !newCourse.subject?.trim()) return
     
     try {
-      const updateData: UpdateCourseRequest = {
-        subject: newCourse.subject.trim(),
-        grade: newCourse.grade || "A",
-        credits: newCourse.credits || 3,
-        category: newCourse.category || categorizeSubject(newCourse.subject.trim())
-      }
+      // const updateData: UpdateCourseRequest = {
+      //   subject: newCourse.subject.trim(),
+      //   grade: newCourse.grade || "A",
+      //   credits: newCourse.credits || 3,
+      //   category: newCourse.category || categorizeSubject(newCourse.subject.trim())
+      // }
+        const payload = {
+    course_Name: newCourse.subject,
+    grade: newCourse.grade,
+    credits: newCourse.credits,
+    termId: newCourse.termId,
+    category: newCourse.category,
+  };
       
-      await updateCourseMutation.mutateAsync({ id: editingCourse.id, data: updateData })
+      await updateCourseMutation.mutateAsync({ id: editingCourse.id, data: payload })
       await refetchCourses()
       
       setEditingCourse(null)
@@ -335,25 +361,25 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
           </button>
         </div>
         
-        {/* Term Selector */}
+        Term Selector
         <div className="mb-6">
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
             <div className="flex items-center gap-6">
               <div className="relative">
                 <label className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Viewing Term</label>
-                <select
-                  value={selectedTermIndex}
-                  onChange={(e) => setSelectedTermIndex(Number(e.target.value))}
-                  className="appearance-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white font-medium pl-3 pr-10 py-2 rounded-lg border border-gray-200 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                <select
+                  value={selectedTerm?.id || ""}
+                  onChange={(e) => {
+                    const idx = sortedTerms.findIndex(term => term.id === e.target.value)
+                    if (idx >= 0) setSelectedTermIndex(idx)
+                  }}
+                  className="appearance-none bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {sortedTerms.map((term, index) => (
-                    <option key={term.id} value={index}>
+                  {sortedTerms.map((term) => (
+                    <option key={term.id} value={term.id}>
                       {term.name} {term.year}
                     </option>
                   ))}
-                  {sortedTerms.length === 0 && (
-                    <option value={0}>No terms available</option>
-                  )}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-[38px] text-gray-500 pointer-events-none" />
               </div>
@@ -707,7 +733,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-black">
                   {editingCourse ? 'Edit Course' : 'Add New Course'}
                 </h3>
                 <button
@@ -739,7 +765,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                     value={newCourse.subject || ""}
                     onChange={(e) => setNewCourse(prev => ({ ...prev, subject: e.target.value }))}
                     placeholder="e.g., AP Calculus BC"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
@@ -751,7 +777,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                     <select
                       value={newCourse.grade || "A"}
                       onChange={(e) => setNewCourse(prev => ({ ...prev, grade: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="A+">A+</option>
                       <option value="A">A</option>
@@ -780,7 +806,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                       min="0.5"
                       max="6"
                       step="0.5"
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -792,7 +818,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                   <select
                     value={newCourse.category || ''}
                     onChange={(e) => setNewCourse(prev => ({ ...prev, category: e.target.value as SubjectCategory || undefined }))}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Auto-detect from subject name</option>
                     <option value="english">English</option>
@@ -822,25 +848,19 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                     </label>
                     {!showCreateTerm ? (
                       <>
-                        <select
-                          value={newCourse.termId || currentTerm?.id || ''}
-                          onChange={(e) => {
-                            if (e.target.value === 'create-new') {
-                              setShowCreateTerm(true)
-                            } else {
-                              setNewCourse(prev => ({ ...prev, termId: e.target.value }))
-                            }
-                          }}
-                          className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select a term</option>
-                          {sortedTerms.map((term) => (
-                            <option key={term.id} value={term.id}>
-                              {term.name} {term.year}
-                            </option>
-                          ))}
-                          <option value="create-new" className="font-semibold">+ Create New Term</option>
-                        </select>
+<select
+  value={newCourse.termId || ''}
+  onChange={(e) => setNewCourse(prev => ({ ...prev, termId: e.target.value }))}
+  className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+>
+  <option value="">Select a term</option>
+  {predefinedTerms.map((term) => (
+    <option key={term.id} value={term.id}>
+      {term.name} {term.year}
+    </option>
+  ))}
+</select>
+
                       </>
                     ) : (
                       <div className="space-y-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
@@ -894,7 +914,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                           <button
                             onClick={handleCreateTerm}
                             disabled={!newTermData.name || !newTermData.startDate || !newTermData.endDate || createTermMutation.isLoading}
-                            className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="flex-1 px-3 py-1.5 bg-green-600 text-black text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                           >
                             {createTermMutation.isLoading && <Loader2 className="animate-spin" size={14} />}
                             Create Term
@@ -909,7 +929,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                                 endDate: ''
                               })
                             }}
-                            className="px-3 py-1.5 text-gray-600 dark:text-gray-300 text-sm hover:text-gray-800 dark:hover:text-white"
+                            className="px-3 py-1.5 text-gray-600 dark:text-gray-300 text-sm hover:text-gray-800 dark:hover:text-black"
                           >
                             Cancel
                           </button>
@@ -924,7 +944,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                 <button
                   onClick={editingCourse ? handleUpdateCourse : handleAddCourse}
                   disabled={!newCourse.subject?.trim() || createCourseMutation.isLoading || updateCourseMutation.isLoading}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
                 >
                   {(createCourseMutation.isLoading || updateCourseMutation.isLoading) && (
                     <Loader2 className="animate-spin" size={16} />
@@ -944,7 +964,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
                       category: undefined
                     })
                   }}
-                  className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium"
+                  className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-black transition-colors font-medium"
                 >
                   Cancel
                 </button>

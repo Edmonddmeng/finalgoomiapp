@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/apiClient'
 import { User } from '@/types'
+import { setAuthToken } from '@/lib/apiClient' 
 
 interface LoginResponse {
   user: User
@@ -20,24 +21,30 @@ class AuthService {
   private accessToken: string | null = null
   private refreshTokenValue: string | null = null
 
+  
+
   setTokens(tokens: { accessToken: string; refreshToken: string }) {
     this.accessToken = tokens.accessToken
     this.refreshTokenValue = tokens.refreshToken
+
+    setAuthToken(tokens.accessToken)
     
     // Set default authorization header
-    if (apiClient.defaults) {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`
-    }
+    // if (apiClient.defaults) {
+    //   apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`
+    // }
   }
 
   clearTokens() {
     this.accessToken = null
     this.refreshTokenValue = null
-    
+
+    setAuthToken(null)
+
     // Remove authorization header
-    if (apiClient.defaults) {
-      delete apiClient.defaults.headers.common['Authorization']
-    }
+    // if (apiClient.defaults) {
+    //   delete apiClient.defaults.headers.common['Authorization']
+    // }
   }
 
   getAccessToken() {
@@ -49,13 +56,34 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/auth/login', {
+    const response = await apiClient.post('/auth/login', {
       email,
       password
     })
-    
-    this.setTokens(response.data.tokens)
-    return response.data
+
+    const { token, id } = response.data
+
+    // Fetch user separately
+    const userResponse = await apiClient.get(`/users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const user = userResponse.data
+    // Manually construct expected shape
+    const loginResponse: LoginResponse = {
+      user,
+      tokens: {
+        accessToken: token,
+    refreshToken: '' // or fetch from backend if available
+  }
+}
+
+this.setTokens(loginResponse.tokens)
+console.log('Login success:', user, loginResponse.tokens)
+
+return loginResponse
   }
 
   async register(data: RegisterData): Promise<LoginResponse> {
@@ -87,9 +115,29 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>('/users/profile')
-    return response.data
+  if (!this.accessToken) throw new Error('No access token set')
+  const tokenPayload = JSON.parse(atob(this.accessToken.split('.')[1]))
+  const userId = tokenPayload.sub || tokenPayload.id // depends on your JWT structure
+
+const response = await apiClient.get<Partial<User>>(`/users/${userId}`)
+
+return {
+  ...response.data,
+  name: response.data.username ?? "",
+  progressLevel: 0,
+  currentStreak: 0,
+  totalPoints: 0,
+  achievements: [],
+  stats: {
+    totalCompetitions: 0,
+    totalActivities: 0,
+    averageGPA: 0,
+    tasksCompleted: 0,
+  },
+} as User
+
   }
+
 
   async requestPasswordReset(email: string): Promise<void> {
     await apiClient.post('/auth/forgot-password', { email })

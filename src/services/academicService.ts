@@ -30,11 +30,43 @@ class AcademicService {
     await apiClient.delete(`/academics/terms/${id}`)
   }
 
-  // Courses
-  async getCourses(params?: { termId?: string; category?: string }): Promise<Academic[]> {
-    const response = await apiClient.get<Academic[]>('/academics/courses', { params })
-    return response.data
+
+// Fixed API Service Method
+async getCourses(userId: string, filters?: { termId?: string; category?: string }): Promise<Academic[]> {
+  const params: any = {};
+  
+  // Always include termId if provided
+  if (filters?.termId) {
+    params.termId = filters.termId;
   }
+  
+  // Include category if provided
+  if (filters?.category) {
+    params.category = filters.category;
+  }
+
+  const response = await apiClient.get<{ courses: any[] }>(`/users/courses/${userId}`, {
+    params: params,
+  });
+
+  return response.data.courses.map(course => ({
+    id: course.id,
+    userId: course.user_id,
+    termId: course.termId,
+    subject: course.course_Name,
+    category: course.category,
+    grade: course.grade,
+    credits: course.credits,
+    gradePoint: undefined,
+    teacher: course.teacher || undefined,
+    room: course.room || undefined,
+    notes: course.notes || undefined,
+    createdAt: course.created_at,
+    updatedAt: course.updated_at,
+  }));
+}
+
+
 
   async createCourse(data: CreateCourseRequest): Promise<Academic> {
     const response = await apiClient.post<Academic>('/academics/courses', data)
@@ -42,12 +74,12 @@ class AcademicService {
   }
 
   async updateCourse(id: string, data: UpdateCourseRequest): Promise<Academic> {
-    const response = await apiClient.put<Academic>(`/academics/courses/${id}`, data)
+    const response = await apiClient.put<Academic>(`/users/user_academics/${id}`, data)
     return response.data
   }
 
   async deleteCourse(id: string): Promise<void> {
-    await apiClient.delete(`/academics/courses/${id}`)
+    await apiClient.delete(`/users/user_academics/${id}`)
   }
 
   // Insights

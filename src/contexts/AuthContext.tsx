@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { authService as authServiceInstance } from '@/services/authService'
 const authService = authServiceInstance
 import { User, AuthTokens } from '@/types'
+import { apiClient } from '@/lib/apiClient'
 
 interface AuthContextType {
   user: User | null
@@ -16,6 +17,7 @@ interface AuthContextType {
   refreshAuth: () => Promise<void>
 }
 
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const TOKEN_KEY = 'goomi_auth_tokens'
@@ -26,64 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // TODO: DEMO MODE - Remove this before production!
-  // This automatically logs in a demo user for presentation purposes
-  useEffect(() => {
-    const initDemoUser = () => {
-      const demoUser: User = {
-        id: 'demo-user-123',
-        email: 'demo@goomiapp.com',
-        name: 'Alex Johnson',
-        username: 'alexj',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-        progressLevel: 78,
-        currentStreak: 12,
-        totalPoints: 2450,
-        achievements: [
-          {
-            id: '1',
-            title: 'First Steps',
-            description: 'Completed your first task',
-            icon: 'trophy',
-            unlockedAt: '2024-01-15',
-            category: 'milestone',
-            points: 100
-          },
-          {
-            id: '2',
-            title: 'Dedicated Student',
-            description: 'Maintained a 7-day streak',
-            icon: 'fire',
-            unlockedAt: '2024-02-01',
-            category: 'streak',
-            points: 200
-          }
-        ],
-        stats: {
-          totalCompetitions: 5,
-          totalActivities: 8,
-          averageGPA: 3.85,
-          tasksCompleted: 127,
-          hoursStudied: 245,
-          satScore: 1520,
-          actScore: 34
-        },
-        createdAt: '2023-09-01',
-        updatedAt: '2024-03-15'
-      };
+    useEffect(() => {
+    const storedUser = localStorage.getItem('goomi_user')
+    const token = localStorage.getItem('accessToken')
 
-      setUser(demoUser);
-      setIsAuthenticated(true);
-      setIsLoading(false);
-    };
-
-    // Initialize demo user immediately
-    initDemoUser();
-  }, []);
+    if (storedUser && token) {
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      setUser(JSON.parse(storedUser))
+      setIsAuthenticated(true)
+    }
+  }, [])
 
   // Load user and tokens from localStorage on mount
-  // COMMENTED OUT FOR DEMO MODE
-  /*
   useEffect(() => {
     const loadStoredAuth = async () => {
       try {
@@ -114,24 +70,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadStoredAuth()
   }, [])
-  */
+  
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const response = await (authService as any).login(email, password)
-      const { user, tokens } = response
-      
-      // Store tokens and user
-      localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
-      localStorage.setItem(USER_KEY, JSON.stringify(user))
-      
-      // Update state
-      setUser(user)
-      setIsAuthenticated(true)
-    } catch (error) {
-      throw error
-    }
-  }, [])
+const login = useCallback(async (email: string, password: string) => {
+  try {
+    const response = await authService.login(email, password)
+    const { user, tokens } = response
+    // Set token manually into headers
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`
+    localStorage.setItem('accessToken', tokens.accessToken)
+    localStorage.setItem("token", tokens.accessToken);
+
+    // Fetch and set user
+    const freshUser = await authService.getCurrentUser()
+    setUser(freshUser)
+    setIsAuthenticated(true)
+    localStorage.setItem(USER_KEY, JSON.stringify(freshUser))
+  } catch (err) {
+    console.error('Login failed:', err)
+    throw err
+  }
+}, [])
+
+
 
   const register = useCallback(async (
     email: string, 

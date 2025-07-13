@@ -7,6 +7,57 @@ import {
   UpdateCourseRequest 
 } from '@/types/academic'
 
+const DEFAULT_TERMS: AcademicTerm[] = [
+  {
+    id: '2024-fall',
+    name: 'Fall',
+    year: 2024,
+    startDate: '2024-08-26',
+    endDate: '2024-12-15',
+    isActive: false
+  },
+  {
+    id: '2024-spring',
+    name: 'Spring',
+    year: 2024,
+    startDate: '2024-01-15',
+    endDate: '2024-05-10',
+    isActive: false
+  },
+  {
+    id: '2025-spring',
+    name: 'Spring',
+    year: 2025,
+    startDate: '2025-01-13',
+    endDate: '2025-05-09',
+    isActive: false
+  },
+  {
+    id: '2025-summer',
+    name: 'Summer',
+    year: 2025,
+    startDate: '2025-05-19',
+    endDate: '2025-08-08',
+    isActive: true
+  },
+  {
+    id: '2025-fall',
+    name: 'Fall',
+    year: 2025,
+    startDate: '2025-08-25',
+    endDate: '2025-12-14',
+    isActive: false
+  },
+  {
+    id: '2026-spring',
+    name: 'Spring',
+    year: 2026,
+    startDate: '2026-01-12',
+    endDate: '2026-05-08',
+    isActive: false
+  }
+];
+
 // Terms
 export function useAcademicTerms() {
   return useApiQuery(() => academicService.getTerms())
@@ -53,12 +104,12 @@ export function useDeleteTerm() {
   )
 }
 
-// Courses
-export function useCourses(termId?: string, category?: string) {
+// Fixed Hook Usage - make sure you're calling it with the selected term
+export function useCourses(userId: string, termId?: string, category?: string) {
   return useApiQuery(
-    () => academicService.getCourses({ termId, category }),
-    [termId, category]
-  )
+    () => academicService.getCourses(userId, { termId, category }),
+    [userId, termId, category]
+  );
 }
 
 export function useCreateCourse() {

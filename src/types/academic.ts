@@ -2,17 +2,18 @@ export interface Academic {
   id: string
   userId: string
   termId: string
-  subject: string
+  subject: string              // maps from course_Name
   category: SubjectCategory
   grade: string
-  gradePoint: number
+  gradePoint?: number          // optional unless calculated
   credits: number
   teacher?: string
   room?: string
   notes?: string
-  createdAt: string
-  updatedAt: string
+  createdAt: string            // maps from created_at
+  updatedAt: string            // maps from updated_at
 }
+
 
 export interface AcademicTerm {
   id: string
