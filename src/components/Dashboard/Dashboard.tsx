@@ -47,7 +47,7 @@ export function Dashboard() {
     )
   }
 
-  const tasks = tasksData?.items || []
+  const tasks = tasksData || []
 
   const handleBackFromDetail = () => {
     setSelectedDetail(null)
