@@ -12,80 +12,83 @@ import {
 class AcademicService {
   // Terms
   async getTerms(): Promise<AcademicTerm[]> {
-    const response = await apiClient.get<AcademicTerm[]>('/academics/terms')
-    return response.data
+    console.log('getTerms')
+    const response = await apiClient.get<{ terms: AcademicTerm[] }>('/academics/terms')
+    console.log('response 1111', response.data.terms)
+    return response.data.terms || []
   }
 
   async createTerm(data: Omit<AcademicTerm, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<AcademicTerm> {
-    const response = await apiClient.post<AcademicTerm>('/academics/terms', data)
-    return response.data
+    // Transform camelCase to snake_case for backend
+    const transformedData = {
+      name: data.name,
+      year: data.year,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      is_current: data.isCurrent
+    }
+    const response = await apiClient.post<{ term: AcademicTerm }>('/academics/terms', transformedData)
+    return response.data.term
   }
 
   async updateTerm(id: string, data: Partial<AcademicTerm>): Promise<AcademicTerm> {
-    const response = await apiClient.put<AcademicTerm>(`/academics/terms/${id}`, data)
-    return response.data
+    // Transform camelCase to snake_case for backend
+    const transformedData: any = {}
+    if (data.name !== undefined) transformedData.name = data.name
+    if (data.year !== undefined) transformedData.year = data.year
+    if (data.startDate !== undefined) transformedData.start_date = data.startDate
+    if (data.endDate !== undefined) transformedData.end_date = data.endDate
+    if (data.isCurrent !== undefined) transformedData.is_current = data.isCurrent
+    
+    const response = await apiClient.put<{ term: AcademicTerm }>(`/academics/terms/${id}`, transformedData)
+    return response.data.term
   }
 
   async deleteTerm(id: string): Promise<void> {
     await apiClient.delete(`/academics/terms/${id}`)
   }
 
-
-// Fixed API Service Method
-async getCourses(userId: string, filters?: { termId?: string; category?: string }): Promise<Academic[]> {
-  const params: any = {};
-  
-  // Always include termId if provided
-  if (filters?.termId) {
-    params.termId = filters.termId;
+  // Courses
+  async getCourses(params?: { termId?: string; category?: string }): Promise<Academic[]> {
+    // Transform camelCase to snake_case for backend
+    const transformedParams: any = {}
+    if (params?.termId) transformedParams.term_id = params.termId
+    if (params?.category) transformedParams.category = params.category
+    
+    const response = await apiClient.get<{ courses: Academic[] }>('/academics/courses', { params: transformedParams })
+    console.log('response 2222', response)
+    return response.data.courses || []
   }
-  
-  // Include category if provided
-  if (filters?.category) {
-    params.category = filters.category;
-  }
-
-  const response = await apiClient.get<{ courses: any[] }>(`/users/courses/${userId}`, {
-    params: params,
-  });
-
-  return response.data.courses.map(course => ({
-    id: course.id,
-    userId: course.user_id,
-    termId: course.termId,
-    subject: course.course_Name,
-    category: course.category,
-    grade: course.grade,
-    credits: course.credits,
-    gradePoint: undefined,
-    teacher: course.teacher || undefined,
-    room: course.room || undefined,
-    notes: course.notes || undefined,
-    createdAt: course.created_at,
-    updatedAt: course.updated_at,
-  }));
-}
-
-
 
   async createCourse(data: CreateCourseRequest): Promise<Academic> {
-    const response = await apiClient.post<Academic>('/academics/courses', data)
-    return response.data
+    // Transform camelCase to snake_case for backend
+    const transformedData = {
+      term_id: data.termId,
+      subject: data.subject,
+      category: data.category,
+      grade: data.grade,
+      credits: data.credits,
+      teacher: data.teacher,
+      room: data.room,
+      notes: data.notes
+    }
+    const response = await apiClient.post<{ course: Academic }>('/academics/courses', transformedData)
+    return response.data.course
   }
 
   async updateCourse(id: string, data: UpdateCourseRequest): Promise<Academic> {
-    const response = await apiClient.put<Academic>(`/users/user_academics/${id}`, data)
-    return response.data
+    const response = await apiClient.put<{ course: Academic }>(`/academics/courses/${id}`, data)
+    return response.data.course
   }
 
   async deleteCourse(id: string): Promise<void> {
-    await apiClient.delete(`/users/user_academics/${id}`)
+    await apiClient.delete(`/academics/courses/${id}`)
   }
 
   // Insights
   async getInsights(): Promise<AcademicInsight[]> {
-    const response = await apiClient.get<AcademicInsight[]>('/academics/insights')
-    return response.data
+    const response = await apiClient.get<{ insights: AcademicInsight[] }>('/academics/insights')
+    return response.data.insights || []
   }
 
   async createInsight(content: string): Promise<AcademicInsight> {
@@ -100,13 +103,18 @@ async getCourses(userId: string, filters?: { termId?: string; category?: string 
 
   // Analytics
   async getGPAStats(): Promise<GPAStats> {
-    const response = await apiClient.get<GPAStats>('/academics/gpa-stats')
-    return response.data
+    const response = await apiClient.get<{ current_gpa: number; gpa_history: any[] }>('/academics/gpa-stats')
+    return {
+      current: response.data.current_gpa || 0,
+      cumulative: response.data.current_gpa || 0,
+      totalCredits: 0,
+      trend: 'stable'
+    }
   }
 
   async getSubjectAnalysis(): Promise<SubjectAnalysis[]> {
-    const response = await apiClient.get<SubjectAnalysis[]>('/academics/subject-analysis')
-    return response.data
+    const response = await apiClient.get<{ subjectAnalysis: SubjectAnalysis[] }>('/academics/subject-analysis')
+    return response.data.subjectAnalysis || []
   }
 
   // Bulk operations

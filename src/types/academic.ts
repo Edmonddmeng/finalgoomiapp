@@ -58,7 +58,7 @@ export interface AcademicInsight {
   userId: string
   content: string
   type: 'daily' | 'weekly' | 'ai_generated'
-  createdAt: string
+  created_at: string
 }
 
 export interface GPAStats {

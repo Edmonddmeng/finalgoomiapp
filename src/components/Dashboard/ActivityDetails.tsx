@@ -12,6 +12,9 @@ interface ActivityDetailsProps {
 }
 
 export function ActivityDetails({ activity, tasks, onBack }: ActivityDetailsProps) {
+  console.log('Start Date:', activity)
+console.log('Hours per week:', activity.hoursPerWeek)
+console.log('Activity object:', activity)
   const relatedTasks = tasks.filter((task) => 
     task.relatedActivityId === activity.id ||
     task.title.toLowerCase().includes(activity.name.toLowerCase())
@@ -119,7 +122,9 @@ export function ActivityDetails({ activity, tasks, onBack }: ActivityDetailsProp
             )}
           </div>
           <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full font-medium border border-white/30">
-            {activity.isActive ? "Active" : "Completed"}
+            {activity.endDate && new Date(activity.endDate) < new Date()
+              ? "Completed"
+              : "Active"}
           </span>
         </div>
 

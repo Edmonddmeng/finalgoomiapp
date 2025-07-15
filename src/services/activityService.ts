@@ -8,6 +8,7 @@ import {
   UpdateActivityRequest,
   ActivityCategory
 } from '@/types/activity'
+import camelcaseKeys from 'camelcase-keys'
 
 class ActivityService {
   // CRUD operations
@@ -16,22 +17,22 @@ class ActivityService {
     isActive?: boolean 
   }): Promise<Activity[]> {
     const response = await apiClient.get<Activity[]>('/activities', { params })
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity[]
   }
 
   async getActivity(id: string): Promise<Activity> {
     const response = await apiClient.get<Activity>(`/activities/${id}`)
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity
   }
 
   async createActivity(data: CreateActivityRequest): Promise<Activity> {
     const response = await apiClient.post<Activity>('/activities', data)
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity
   }
 
   async updateActivity(id: string, data: UpdateActivityRequest): Promise<Activity> {
     const response = await apiClient.put<Activity>(`/activities/${id}`, data)
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity
   }
 
   async deleteActivity(id: string): Promise<void> {
@@ -47,7 +48,10 @@ class ActivityService {
       personalInsights: ActivityInsight[]
       aiInsights: AIActivityInsight[]
     }>(`/activities/${activityId}/insights`)
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as {
+      personalInsights: ActivityInsight[]
+      aiInsights: AIActivityInsight[]
+    }
   }
 
   async addPersonalInsight(activityId: string, content: string): Promise<ActivityInsight> {
@@ -55,14 +59,14 @@ class ActivityService {
       `/activities/${activityId}/insights`,
       { content }
     )
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as ActivityInsight
   }
 
   async generateAIInsight(activityId: string): Promise<AIActivityInsight> {
     const response = await apiClient.post<AIActivityInsight>(
       `/activities/${activityId}/ai-insights`
     )
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as AIActivityInsight
   }
 
   async deleteInsight(activityId: string, insightId: string): Promise<void> {
@@ -72,7 +76,7 @@ class ActivityService {
   // Statistics
   async getStats(): Promise<ActivityStats> {
     const response = await apiClient.get<ActivityStats>('/activities/stats')
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as ActivityStats
   }
 
   // Achievements
@@ -81,14 +85,14 @@ class ActivityService {
       `/activities/${activityId}/achievements`,
       { achievement }
     )
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity
   }
 
   async removeAchievement(activityId: string, achievementIndex: number): Promise<Activity> {
     const response = await apiClient.delete<Activity>(
       `/activities/${activityId}/achievements/${achievementIndex}`
     )
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Activity
   }
 
   // Time tracking
@@ -106,7 +110,10 @@ class ActivityService {
     const response = await apiClient.get(`/activities/${activityId}/hours-log`, {
       params: { startDate, endDate }
     })
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as {
+      date: string
+      hours: number
+    }[]
   }
 
   // Bulk operations
@@ -125,7 +132,10 @@ class ActivityService {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as {
+      imported: number
+      errors: string[]
+    }
   }
 
   async exportActivities(params?: { 
@@ -136,7 +146,7 @@ class ActivityService {
       params,
       responseType: 'blob'
     })
-    return response.data
+    return camelcaseKeys(response.data as any, { deep: true }) as Blob
   }
 }
 

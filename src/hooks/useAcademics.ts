@@ -7,8 +7,6 @@ import {
   UpdateCourseRequest 
 } from '@/types/academic'
 
-
-
 // Terms
 export function useAcademicTerms() {
   return useApiQuery(() => academicService.getTerms())
@@ -55,12 +53,12 @@ export function useDeleteTerm() {
   )
 }
 
-// Fixed Hook Usage - make sure you're calling it with the selected term
-export function useCourses(userId: string, termId?: string, category?: string) {
+// Courses
+export function useCourses(termId?: string, category?: string) {
   return useApiQuery(
-    () => academicService.getCourses(userId, { termId, category }),
-    [userId, termId, category]
-  );
+    () => academicService.getCourses({ termId, category }),
+    [termId, category]
+  )
 }
 
 export function useCreateCourse() {

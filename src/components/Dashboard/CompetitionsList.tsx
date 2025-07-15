@@ -20,14 +20,13 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
   
   const [newCompetition, setNewCompetition] = useState({
     name: "",
-    category: "science" as CompetitionCategory,
-    level: "regional" as "school" | "regional" | "state" | "national" | "international",
+    category: "academic" as CompetitionCategory,
     date: "",
-    location: "",
+    placement: "",
+    participants: 1,
     description: "",
-    achievement: "",
-    teamSize: 1,
-    ranking: ""
+    satisfaction: 3,
+    notes: ""
   })
   
   const handleSubmit = async () => {
@@ -48,14 +47,13 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
       setEditingCompetition(null)
       setNewCompetition({
         name: "",
-        category: "science",
-        level: "regional",
+        category: "academic",
         date: "",
-        location: "",
+        placement: "",
+        participants: 1,
         description: "",
-        achievement: "",
-        teamSize: 1,
-        ranking: ""
+        satisfaction: 3,
+        notes: ""
       })
     } catch (error) {
       console.error('Failed to save competition:', error)
@@ -67,13 +65,12 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
     setNewCompetition({
       name: competition.name,
       category: competition.category,
-      level: competition.level,
       date: competition.date,
-      location: competition.location || "",
+      placement: competition.placement,
+      participants: competition.participants || 1,
       description: competition.description || "",
-      achievement: competition.achievement || "",
-      teamSize: competition.teamSize || 1,
-      ranking: competition.ranking || ""
+      satisfaction: competition.satisfaction || 3,
+      notes: competition.notes || ""
     })
     setShowAddCompetition(true)
   }
@@ -138,11 +135,11 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                         {competition.name}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {competition.category} • {competition.level} level
+                        {competition.category} • {competition.participants} participants
                       </p>
-                      {competition.achievement && (
+                      {competition.placement && (
                         <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                          🏆 {competition.achievement}
+                          🏆 {competition.placement}
                         </p>
                       )}
                     </div>
@@ -205,8 +202,8 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                     value={newCompetition.name}
                     onChange={(e) => setNewCompetition(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Science Olympiad"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -217,35 +214,29 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                     <select
                       value={newCompetition.category}
                       onChange={(e) => setNewCompetition(prev => ({ ...prev, category: e.target.value as CompetitionCategory }))}
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="science">Science</option>
-                      <option value="math">Math</option>
-                      <option value="programming">Programming</option>
-                      <option value="robotics">Robotics</option>
-                      <option value="debate">Debate</option>
-                      <option value="writing">Writing</option>
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                      <option value="academic">Academic</option>
+                      <option value="sports">Sports</option>
                       <option value="arts">Arts</option>
+                      <option value="technology">Technology</option>
                       <option value="business">Business</option>
+                      <option value="community">Community</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Level *
+                      Participants
                     </label>
-                    <select
-                      value={newCompetition.level}
-                      onChange={(e) => setNewCompetition(prev => ({ ...prev, level: e.target.value as any }))}
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="school">School</option>
-                      <option value="regional">Regional</option>
-                      <option value="state">State</option>
-                      <option value="national">National</option>
-                      <option value="international">International</option>
-                    </select>
+                    <input
+                      type="number"
+                      value={newCompetition.participants}
+                      onChange={(e) => setNewCompetition(prev => ({ ...prev, participants: parseInt(e.target.value) || 1 }))}
+                      min="1"
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                      />
                   </div>
                 </div>
                 
@@ -257,34 +248,35 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                     type="date"
                     value={newCompetition.date}
                     onChange={(e) => setNewCompetition(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Location
+                    Placement/Result
                   </label>
                   <input
                     type="text"
-                    value={newCompetition.location}
-                    onChange={(e) => setNewCompetition(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="e.g., MIT, Boston MA"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Achievement/Result
-                  </label>
-                  <input
-                    type="text"
-                    value={newCompetition.achievement}
-                    onChange={(e) => setNewCompetition(prev => ({ ...prev, achievement: e.target.value }))}
+                    value={newCompetition.placement}
+                    onChange={(e) => setNewCompetition(prev => ({ ...prev, placement: e.target.value }))}
                     placeholder="e.g., 1st Place, Gold Medal, Finalist"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Satisfaction (1-5)
+                  </label>
+                  <input
+                    type="number"
+                    value={newCompetition.satisfaction}
+                    onChange={(e) => setNewCompetition(prev => ({ ...prev, satisfaction: parseInt(e.target.value) || 3 }))}
+                    min="1"
+                    max="5"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div>
@@ -296,8 +288,8 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                     onChange={(e) => setNewCompetition(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Describe the competition and your experience"
                     rows={3}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
               </div>
               
@@ -318,14 +310,13 @@ export function CompetitionsList({ onBack, onSelectCompetition }: CompetitionsLi
                     setEditingCompetition(null)
                     setNewCompetition({
                       name: "",
-                      category: "science",
-                      level: "regional",
+                      category: "academic",
                       date: "",
-                      location: "",
+                      placement: "",
+                      participants: 1,
                       description: "",
-                      achievement: "",
-                      teamSize: 1,
-                      ranking: ""
+                      satisfaction: 3,
+                      notes: ""
                     })
                   }}
                   className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium"

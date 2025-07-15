@@ -21,8 +21,6 @@ class AuthService {
   private accessToken: string | null = null
   private refreshTokenValue: string | null = null
 
-  
-
   setTokens(tokens: { accessToken: string; refreshToken: string }) {
     this.accessToken = tokens.accessToken
     this.refreshTokenValue = tokens.refreshToken
@@ -56,7 +54,7 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await apiClient.post('/auth/login', {
+    const response = await apiClient.post('https://goomi-community-backend.onrender.com/api/auth/login', {
       email,
       password
     })

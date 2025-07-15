@@ -12,11 +12,13 @@ import { PaginatedResponse, PaginationParams } from '@/types/api'
 
 class TaskService {
   // CRUD operations
-  async getTasks(filters?: TaskFilters & PaginationParams): Promise<PaginatedResponse<Task>> {
-    const response = await apiClient.get<PaginatedResponse<Task>>('/tasks', { 
+  async getTasks(filters?: TaskFilters & PaginationParams): Promise<Task[]> {
+    console.log('filters', filters);
+    const response = await apiClient.get<Task[]>('/tasks', { 
       params: filters 
-    })
-    return response.data
+    });
+    console.log('response 1234', response.data);
+    return response.data;
   }
 
   async getTask(id: string): Promise<Task> {

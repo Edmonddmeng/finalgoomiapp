@@ -2,7 +2,8 @@
 import { useState } from "react"
 import { ChevronLeft, Plus, Users, Calendar, Clock, Edit2, Trash2, Loader2 } from "lucide-react"
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from "@/hooks/useActivities"
-import { Activity, ActivityCategory } from "@/types"
+import { Activity } from "@/types"
+import { ActivityCategory } from "@/types/activity"
 
 interface ActivitiesListProps {
   onBack: () => void
@@ -26,8 +27,7 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
     startDate: "",
     endDate: "",
     hoursPerWeek: 2,
-    location: "",
-    impact: ""
+    isActive: true
   })
   
   const handleSubmit = async () => {
@@ -37,10 +37,27 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
       if (editingActivity) {
         await updateActivityMutation.mutateAsync({
           id: editingActivity.id,
-          data: newActivity
+          data: {
+            name: newActivity.name,
+            category: newActivity.category,
+            role: newActivity.role,
+            description: newActivity.description,
+            startDate: newActivity.startDate,
+            endDate: newActivity.endDate,
+            hoursPerWeek: newActivity.hoursPerWeek
+          }
         })
       } else {
-        await createActivityMutation.mutateAsync(newActivity)
+        await createActivityMutation.mutateAsync({
+          name: newActivity.name,
+          category: newActivity.category,
+          role: newActivity.role,
+          description: newActivity.description,
+          startDate: newActivity.startDate,
+          endDate: newActivity.endDate,
+          hoursPerWeek: newActivity.hoursPerWeek,
+          isActive: newActivity.isActive
+        })
       }
       
       await refetch()
@@ -54,8 +71,7 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
         startDate: "",
         endDate: "",
         hoursPerWeek: 2,
-        location: "",
-        impact: ""
+        isActive: true
       })
     } catch (error) {
       console.error('Failed to save activity:', error)
@@ -67,13 +83,12 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
     setNewActivity({
       name: activity.name,
       category: activity.category,
-      role: activity.role,
+      role: activity.role || "",
       description: activity.description || "",
       startDate: activity.startDate,
       endDate: activity.endDate || "",
-      hoursPerWeek: activity.hoursPerWeek,
-      location: activity.location || "",
-      impact: activity.impact || ""
+      hoursPerWeek: activity.hoursPerWeek || 2,
+      isActive: true
     })
     setShowAddActivity(true)
   }
@@ -205,8 +220,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                     value={newActivity.name}
                     onChange={(e) => setNewActivity(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., Student Council"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div>
@@ -218,8 +233,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                     value={newActivity.role}
                     onChange={(e) => setNewActivity(prev => ({ ...prev, role: e.target.value }))}
                     placeholder="e.g., President, Member, Volunteer"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div>
@@ -229,8 +244,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                   <select
                     value={newActivity.category}
                     onChange={(e) => setNewActivity(prev => ({ ...prev, category: e.target.value as ActivityCategory }))}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  >
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
                     <option value="sports">Sports</option>
                     <option value="clubs">Clubs</option>
                     <option value="arts">Arts</option>
@@ -249,8 +264,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                     onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Describe your involvement and responsibilities"
                     rows={3}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -262,8 +277,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                       type="date"
                       value={newActivity.startDate}
                       onChange={(e) => setNewActivity(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                      />
                   </div>
                   
                   <div>
@@ -274,8 +289,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                       type="date"
                       value={newActivity.endDate}
                       onChange={(e) => setNewActivity(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
+                      className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                      />
                   </div>
                 </div>
                 
@@ -289,8 +304,8 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                     onChange={(e) => setNewActivity(prev => ({ ...prev, hoursPerWeek: Number(e.target.value) }))}
                     min="1"
                     max="40"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
                 </div>
               </div>
               
@@ -317,8 +332,7 @@ export function ActivitiesList({ onBack, onSelectActivity }: ActivitiesListProps
                       startDate: "",
                       endDate: "",
                       hoursPerWeek: 2,
-                      location: "",
-                      impact: ""
+                      isActive: true
                     })
                   }}
                   className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium"

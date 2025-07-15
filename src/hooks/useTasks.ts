@@ -8,13 +8,21 @@ import {
   TaskFilters 
 } from '@/types/task'
 import { PaginationParams } from '@/types/api'
+import { useQueryClient } from '@tanstack/react-query'
+
+
 
 export function useTasks(filters?: TaskFilters & PaginationParams) {
   const [currentFilters, setCurrentFilters] = useState(filters)
   
   const query = useApiQuery(
     () => taskService.getTasks(currentFilters),
-    [currentFilters]
+    [currentFilters],
+    {
+      onSuccess: (data) => {
+        console.log('✅ Hook received data:', data);
+      }
+    }
   )
 
   const updateFilters = (newFilters: TaskFilters & PaginationParams) => {
@@ -57,10 +65,63 @@ export function useDeleteTask() {
   )
 }
 
+// export function useToggleTask() {
+//   return useApiMutation(
+//     (id: string) => taskService.toggleTask(id)
+//   )
+// }
+
 export function useToggleTask() {
-  return useApiMutation(
+  const queryClient = useQueryClient()
+  
+  const mutation = useApiMutation(
     (id: string) => taskService.toggleTask(id)
   )
+  
+  const toggleWithRefresh = async (taskId: string) => {
+    console.log('🔄 Toggling task:', taskId)
+    
+    try {
+      const result = await mutation.mutate(taskId)
+      console.log('✅ Toggle successful:', result)
+      
+      // Strategy 1: Invalidate ALL queries (nuclear option)
+      console.log('🧹 Invalidating ALL queries...')
+      await queryClient.invalidateQueries()
+      
+      // Strategy 2: Also force refetch all queries with task data
+      console.log('🔄 Force refetching task queries...')
+      const allQueries = queryClient.getQueryCache().getAll()
+      
+      for (const query of allQueries) {
+        if (query.state.data && Array.isArray(query.state.data)) {
+          // Check if this looks like task data
+          const hasTaskStructure = query.state.data.some((item: any) => 
+            item && typeof item === 'object' && 'id' in item && 'completed' in item
+          )
+          
+          if (hasTaskStructure) {
+            console.log('🎯 Found task query, force refetching:', query.queryKey)
+            await queryClient.refetchQueries({ 
+              queryKey: query.queryKey,
+              exact: true 
+            })
+          }
+        }
+      }
+      
+      console.log('✅ Cache operations completed')
+      
+    } catch (error) {
+      console.error('❌ Toggle failed:', error)
+      throw error
+    }
+  }
+  
+  return {
+    ...mutation,
+    mutate: toggleWithRefresh
+  }
 }
 
 export function useCompleteTasks() {
