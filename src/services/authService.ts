@@ -54,7 +54,8 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await apiClient.post('https://goomi-community-backend.onrender.com/api/auth/login', {
+    // const response = await apiClient.post('https://goomi-community-backend.onrender.com/api/auth/login', {
+    const response = await apiClient.post('/auth/login', {
       email,
       password
     })
@@ -129,7 +130,7 @@ return {
   stats: {
     totalCompetitions: 0,
     totalActivities: 0,
-    averageGPA: 0,
+    overallGPA: 0,
     tasksCompleted: 0,
   },
 } as User

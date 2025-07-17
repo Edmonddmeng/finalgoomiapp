@@ -13,7 +13,8 @@ import {
   useCreateInsight,
   useGPAStats,
   useSubjectAnalysis,
-  useCreateTerm
+  useCreateTerm,
+  useOverallGPA
 } from "@/hooks/useAcademics"
 import { useDashboardStats } from "@/hooks/useUser"
 import type { Academic, CreateCourseRequest, UpdateCourseRequest } from "@/types/academic"
@@ -42,6 +43,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
   const { data: dashboardStats } = useDashboardStats()
   const { data: insights, isLoading: insightsLoading } = useAcademicInsights()
   const { data: subjectAnalysisData, isLoading: subjectAnalysisLoading } = useSubjectAnalysis()
+  const { data: overallGPAData, isLoading: overallGPALoading } = useOverallGPA()
 
   // Always use sorted terms for display and selection
   const sortedTerms = useMemo(() => {
@@ -55,13 +57,21 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
   }, [terms])
 
   // Ensure selectedTermIndex is valid when sortedTerms changes
+  // useEffect(() => {
+  //   if (sortedTerms.length === 0) {
+  //     setSelectedTermIndex(0)
+  //   } else if (selectedTermIndex >= sortedTerms.length) {
+  //     setSelectedTermIndex(0)
+  //   }
+  // }, [sortedTerms.length])
+
   useEffect(() => {
-    if (sortedTerms.length === 0) {
-      setSelectedTermIndex(0)
-    } else if (selectedTermIndex >= sortedTerms.length) {
-      setSelectedTermIndex(0)
+    // Only reset if the selected index becomes invalid due to term changes
+    if (selectedTermIndex >= sortedTerms.length && selectedTermIndex !== -1) {
+      setSelectedTermIndex(-1)
     }
-  }, [sortedTerms.length])
+    // Don't automatically change from -1 (All Courses) when terms load
+  }, [sortedTerms.length, selectedTermIndex])
 
   // Selected term for filtering courses
   const selectedTerm = selectedTermIndex === -1 ? null : sortedTerms[selectedTermIndex]
@@ -101,7 +111,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
 
   const termGPA = selectedTerm ? calculateTermGPA(termAcademics) : calculateTermGPA(termAcademics)
 
-  const overallGPA = gpaStats?.cumulative || dashboardStats?.currentGPA || 0
+  const overallGPA = overallGPAData?.overallGPA || gpaStats?.cumulative || dashboardStats?.currentGPA || 0
   const gpaColor = overallGPA >= 3.5 ? "text-green-600" : overallGPA >= 3.0 ? "text-blue-600" : "text-yellow-600"
   const termGpaColor = termGPA >= 3.5 ? "text-green-600" : termGPA >= 3.0 ? "text-blue-600" : "text-yellow-600"
 
@@ -317,7 +327,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">SAT Score</p>
               <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                N/A
+               {overallGPAData?.satScore}
               </p>
             </div>
           </div>
@@ -373,7 +383,7 @@ export function AcademicDetails({ onBack }: AcademicDetailsProps) {
           {selectedTerm ? "Term GPA" : "Overall GPA"}
         </p>
         <p className={`text-xl font-bold ${termGpaColor}`}>
-          {termGPA.toFixed(2)}
+          {selectedTerm ? termGPA.toFixed(2) : overallGPA.toFixed(2)}
         </p>
       </div>
       

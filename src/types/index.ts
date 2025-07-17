@@ -51,6 +51,8 @@ export interface DashboardStats {
     hoursStudied: number
     activitiesAttended: number
   }
+  totalCompetitions: number
+  totalActivities: number
 }
 
 // Notification types

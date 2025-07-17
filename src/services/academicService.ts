@@ -10,6 +10,23 @@ import {
 } from '@/types/academic'
 
 class AcademicService {
+
+    // NEW: Enhanced GPA Analytics using the new API endpoints
+    async getOverallGPA(): Promise<{
+      overallGPA: number
+      totalCourses: number
+      completedCourses: number
+      totalCredits: number
+      currentTermGPA: number | null
+      gradeDistribution: Record<string, number>
+      lastUpdated: string
+      actScore: number
+      satScore: number
+    }> {
+      const response = await apiClient.get('/academics/gpa/overall')
+      return response.data
+    }
+  
   // Terms
   async getTerms(): Promise<AcademicTerm[]> {
     console.log('getTerms')

@@ -22,3 +22,13 @@ export const LogoIcon = ({ className }: { className?: string }) => {
     />
   );
 };
+
+export const LogoIconDashboard = ({ className }: { className?: string }) => {
+  return (
+    <img
+      src="/goomi.svg"
+      alt="Goomi Icon"
+      className={cn("h-15 w-15", className)}
+    />
+  );
+};

@@ -1,12 +1,14 @@
+
 import { useState } from "react"
 import Image from "next/image"
 import type { User, Community, CommunityCategory } from "@/types"
-import { Award, Settings, Users, Plus, X, Trash2, Loader2 } from "lucide-react"
+import { Award, Settings, Users, Plus, X, Trash2, Loader2, Trophy, Clock, Upload } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
 import { userService } from "@/services/userService"
+// import { Upload } from "lucide-react"
 
 export function Profile() {
   const { user: authUser } = useAuth()
@@ -33,10 +35,21 @@ export function Profile() {
   const deleteCommunityMutation = useApiMutation(
     (communityId: string) => communityService.deleteCommunity(communityId)
   )
+
+  const updateProfileMutation = useApiMutation(
+    (profileData: { username?: string; bio?: string; avatar?: string }) => 
+      userService.updateProfile(profileData)
+  )
   
   const user = userProfile || authUser
+  
+  // State for achievement tabs
+  const [activeAchievementTab, setActiveAchievementTab] = useState<'completed' | 'inProgress'>('completed')
+  
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [showEditProfile, setShowEditProfile] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [newCommunity, setNewCommunity] = useState<{
     name: string
     description: string
@@ -48,10 +61,22 @@ export function Profile() {
     category: "",
     avatar: ""
   })
+
+  const [editProfile, setEditProfile] = useState<{
+    name: string
+    bio: string
+    avatar: string
+  }>({
+    name: "",
+    bio: "",
+    avatar: ""
+  })
   
   // Filter communities created by the user (assuming creator is the first member or has high member count)
   const userCommunities = communities?.filter(community => community.joined) || []
-  const totalAchievements = user?.achievements?.length || 0
+  const totalAchievements = userProfile?.stats?.totalCompetitions || 0
+  console.log("userProfile", userProfile)
+  
 
   const handleCreateCommunity = () => {
     if (!newCommunity.name.trim() || !newCommunity.description.trim() || !newCommunity.category.trim()) return
@@ -78,7 +103,44 @@ export function Profile() {
     setShowDeleteConfirm(null)
   }
 
+  const handleOpenEditProfile = () => {
+    setEditProfile({
+      name: user?.name || "",
+      bio: user?.bio || "",
+      avatar: user?.avatar || ""
+    })
+    setShowEditProfile(true)
+  }
+
+  const handleUpdateProfile = () => {
+    if (!editProfile.name.trim()) return
+
+    updateProfileMutation.mutate({
+      username: editProfile.name.trim(),
+      bio: editProfile.bio.trim(),
+      avatar: editProfile.avatar.trim() || undefined
+    }, {
+      onSuccess: () => {
+        refetchProfile()
+        setShowEditProfile(false)
+      }
+    })
+  }
+
   const communityToDelete = showDeleteConfirm && communities ? communities.find(c => c.id === showDeleteConfirm) : null
+  
+  // Get achievements based on active tab
+  const getAchievements = () => {
+    if (activeAchievementTab === 'completed') {
+      return user?.achievements || []
+    } else {
+      return user?.uncompletedAchievements || []
+    }
+  }
+  
+  const achievements = getAchievements()
+  const completedCount = user?.achievements?.length || 0
+  const inProgressCount = user?.uncompletedAchievements?.length || 0
   
   // Loading state
   if (profileLoading || communitiesLoading || !user) {
@@ -91,6 +153,82 @@ export function Profile() {
       </div>
     )
   }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+  
+    setUploadingAvatar(true)
+    
+    const fileName = `pfp/${crypto.randomUUID()}-${file.name}`
+    const fileType = file.type
+    const authToken = localStorage.getItem("token")
+    const userId = user.id
+  
+    if (!authToken || !userId) {
+      console.error("❌ Auth token or userId not found")
+      setUploadingAvatar(false)
+      return
+    }
+  
+    try {
+      // Get signed upload URL
+      const res = await fetch("https://goomi-community-backend.onrender.com/api/s3-upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ fileName, fileType }),
+      })
+  
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error("❌ Failed to get upload URL:", errorText)
+        setUploadingAvatar(false)
+        return
+      }
+  
+      const { uploadUrl, fileUrl } = await res.json()
+  
+      // Upload file to S3
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fileType },
+        body: file,
+      })
+  
+      // Update profile picture URL in database
+      const updateRes = await fetch("https://goomi-community-backend.onrender.com/api/user/update-profile-picture-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ userId, profilePicture: fileUrl }),
+      })
+  
+      if (!updateRes.ok) {
+        const errorText = await updateRes.text()
+        console.error("❌ Failed to update profile picture:", errorText)
+        setUploadingAvatar(false)
+        return
+      }
+  
+      // Update local state
+      setEditProfile(prev => ({ ...prev, avatar: fileUrl }))
+      
+      // Refresh profile data
+      refetchProfile()
+      
+      console.log("✅ Avatar updated successfully")
+    } catch (err) {
+      console.error("❌ Upload failed", err)
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+  
 
   return (
     <div className="space-y-8">
@@ -116,16 +254,19 @@ export function Profile() {
                 <span className="text-sm ml-1 text-white/90">Progress</span>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
-                <span className="font-bold">{totalAchievements}</span>
-                <span className="text-sm ml-1 text-white/90">Achievements</span>
+                <span className="font-bold">{user.stats?.totalCompetitions}</span>
+                <span className="text-sm ml-1 text-white/90">Competitions</span>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
-                <span className="font-bold">{user.stats?.averageGPA?.toFixed(2) || '0.00'}</span>
+                <span className="font-bold">{user.stats?.overallGPA?.toFixed(2) || '0.00'}</span>
                 <span className="text-sm ml-1 text-white/90">GPA</span>
               </div>
             </div>
           </div>
-          <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-white/30 transition-colors">
+          <button 
+            onClick={handleOpenEditProfile}
+            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-white/30 transition-colors"
+          >
             <Settings size={16} />
             <span>Edit Profile</span>
           </button>
@@ -133,24 +274,143 @@ export function Profile() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Updated Achievements Card with Tabs */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Achievements</h3>
-          <div className="space-y-3">
-            {user.achievements.map((ach) => (
-              <div key={ach.id} className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 text-yellow-600 rounded-full">
-                  <Award size={16} />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Achievements</h3>
+          </div>
+          
+          {/* Achievement Tabs */}
+          <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1 mb-4">
+            <button
+              onClick={() => setActiveAchievementTab('completed')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
+                activeAchievementTab === 'completed'
+                  ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <Trophy size={16} />
+              <span>Completed</span>
+              {completedCount > 0 && (
+                <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
+                  activeAchievementTab === 'completed' 
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+                    : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-400'
+                }`}>
+                  {completedCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveAchievementTab('inProgress')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
+                activeAchievementTab === 'inProgress'
+                  ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <Clock size={16} />
+              <span>In Progress</span>
+              {inProgressCount > 0 && (
+                <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
+                  activeAchievementTab === 'inProgress' 
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+                    : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-400'
+                }`}>
+                  {inProgressCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Achievement Content */}
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {achievements.length > 0 ? (
+              achievements.map((achievement) => (
+                <div key={achievement.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <div className={`p-2 rounded-full ${
+                    activeAchievementTab === 'completed' 
+                      ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                  }`}>
+                    {activeAchievementTab === 'completed' ? (
+                      <Award size={16} />
+                    ) : (
+                      <Clock size={16} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">
+                          {achievement.title}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {achievement.description}
+                        </p>
+                        {activeAchievementTab === 'completed' && achievement.unlockedAt && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Completed on {new Date(achievement.unlockedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                        {activeAchievementTab === 'inProgress' && achievement.category && (
+                          <div className="mt-2">
+                            <span className="inline-block px-2 py-1 text-xs bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-400 rounded-full">
+                              {achievement.category}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {achievement.tier && (
+                        <span className={`ml-2 px-2 py-1 text-xs rounded-full font-medium ${
+                          achievement.tier === 'platinum' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' :
+                          achievement.tier === 'gold' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                          achievement.tier === 'silver' ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-400' :
+                          'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                        }`}>
+                          {achievement.tier}
+                        </span>
+                      )}
+                    </div>
+                    {achievement.progress && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          <span>Progress</span>
+                          <span>{achievement.progress.current} / {achievement.progress.target}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                          <div 
+                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min((achievement.progress.current / achievement.progress.target) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{ach.title}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {new Date(ach.unlockedAt).toLocaleDateString()}
-                  </p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                {activeAchievementTab === 'completed' ? (
+                  <>
+                    <Trophy size={48} className="mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">No achievements unlocked yet</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Complete competitions to earn achievements!</p>
+                  </>
+                ) : (
+                  <>
+                    <Clock size={48} className="mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">No competitions in progress</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Start competing to track your progress!</p>
+                  </>
+                )}
               </div>
-            ))}
+            )}
           </div>
         </div>
+
+        {/* Friends Card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Friends</h3>
           <div className="space-y-3">
@@ -277,8 +537,8 @@ export function Profile() {
                     value={newCommunity.name}
                     onChange={(e) => setNewCommunity(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., AP Biology Study Group"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
                 </div>
 
                 <div>
@@ -288,18 +548,17 @@ export function Profile() {
                   <select
                     value={newCommunity.category}
                     onChange={(e) => setNewCommunity(prev => ({ ...prev, category: e.target.value as CommunityCategory | "" }))}
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select a category</option>
-                    <option value="Academics">Academics</option>
-                    <option value="STEM">STEM</option>
-                    <option value="Sports">Sports</option>
-                    <option value="Arts">Arts</option>
-                    <option value="Languages">Languages</option>
-                    <option value="College Prep">College Prep</option>
-                    <option value="Hobbies">Hobbies</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    <option value="academic">Academic</option>
+                    <option value="technology">Technology</option>
+                    <option value="sports">Sports</option>
+                    <option value="arts">Arts</option>
+                    <option value="lifestyle">Lifestyle</option>
+                    <option value="career">Career</option>
+                    <option value="general">General</option>
+                </select>
                 </div>
 
                 <div>
@@ -310,7 +569,7 @@ export function Profile() {
                     value={newCommunity.description}
                     onChange={(e) => setNewCommunity(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="What's this community about? Who should join?"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     rows={3}
                   />
                 </div>
@@ -324,8 +583,8 @@ export function Profile() {
                     value={newCommunity.avatar}
                     onChange={(e) => setNewCommunity(prev => ({ ...prev, avatar: e.target.value }))}
                     placeholder="https://example.com/avatar.jpg"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Leave empty to generate a default avatar
                   </p>
@@ -343,8 +602,8 @@ export function Profile() {
                 </button>
                 <button
                   onClick={() => setShowCreateCommunity(false)}
-                  className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium"
-                >
+                  className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
                   Cancel
                 </button>
               </div>
@@ -392,6 +651,141 @@ export function Profile() {
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
                   className="flex-1 px-4 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h3>
+                <button
+                  onClick={() => setShowEditProfile(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                >
+                  <X size={20} className="text-gray-600 dark:text-gray-300" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Display Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editProfile.name}
+                    onChange={(e) => setEditProfile(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter your display name"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Bio
+                  </label>
+                  <textarea
+                    value={editProfile.bio}
+                    onChange={(e) => setEditProfile(prev => ({ ...prev, bio: e.target.value }))}
+                    placeholder="Tell us about yourself..."
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Avatar Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Profile Picture
+                  </label>
+                  
+                  {/* Current Avatar Display */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <Image
+                      src={editProfile.avatar || user.avatar || "/placeholder.svg"}
+                      alt="Profile picture"
+                      width={64}
+                      height={64}
+                      className="rounded-full border-2 border-gray-200 dark:border-gray-600"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg"
+                      }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Upload a new picture or provide an image URL
+                      </p>
+                      <div className="flex gap-2">
+                        <label 
+                          htmlFor="avatar-upload"
+                          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border cursor-pointer transition-colors ${
+                            uploadingAvatar 
+                              ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' 
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {uploadingAvatar ? (
+                            <>
+                              <Loader2 className="animate-spin h-4 w-4" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4" />
+                              Upload Image
+                            </>
+                          )}
+                        </label>
+                        <input
+                          id="avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          disabled={uploadingAvatar}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={!editProfile.name.trim() || updateProfileMutation.isLoading || uploadingAvatar}
+                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                >
+                  {updateProfileMutation.isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Updating...
+                    </>
+                  ) : uploadingAvatar ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Settings size={18} />
+                      Update Profile
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowEditProfile(false)}
+                  disabled={uploadingAvatar}
+                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

@@ -6,6 +6,7 @@ class UserService {
   // Profile operations
   async getProfile(): Promise<User> {
     const response = await apiClient.get<User>('/users/profile')
+    console.log("response", response.data)
     return response.data
   }
 

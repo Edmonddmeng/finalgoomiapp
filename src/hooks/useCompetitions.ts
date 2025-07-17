@@ -85,3 +85,29 @@ export function useGenerateCompetitionInsight(competitionId: string) {
     }
   )
 }
+
+export function useCompleteCompetition() {
+  const { refetch } = useCompetitions()
+  
+  return useApiMutation(
+    (id: string) => competitionService.completeCompetition(id),
+    {
+      onSuccess: () => {
+        refetch()
+      }
+    }
+  )
+}
+
+export function useUncompleteCompetition() {
+  const { refetch } = useCompetitions()
+  
+  return useApiMutation(
+    (id: string) => competitionService.uncompleteCompetition(id),
+    {
+      onSuccess: () => {
+        refetch()
+      }
+    }
+  )
+}

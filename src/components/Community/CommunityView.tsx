@@ -1,8 +1,10 @@
+
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { Community as CommunityType, CommunityPost } from "@/types"
-import { ChevronLeft, Users, Plus, Send, X, Clock, TrendingUp } from "lucide-react"
+import { ChevronLeft, Users, Plus, Send, X, Clock, TrendingUp, Upload, Loader2, Trash2 } from "lucide-react"
 import { PostCard } from "./PostCard"
+import Image from "next/image"
 
 interface CommunityViewProps {
   community: CommunityType
@@ -11,8 +13,11 @@ interface CommunityViewProps {
   isJoined: boolean
   onBack: () => void
   onJoin: (communityId: string) => void
+  onLeave: (communityId: string) => void
   onVotePost: (postId: string, voteType: "up" | "down") => void
-  onCreatePost: (post: { title: string; content: string; communityId: string; tags?: string[] }) => void
+  onCreatePost: (post: { title: string; content: string; communityId: string; tags?: string[]; photo?: string }) => void
+  onPostUpdate?: (updatedPost: CommunityPost) => void
+  onPostDelete?: (postId: string) => void
 }
 
 export function CommunityView({ 
@@ -22,20 +27,33 @@ export function CommunityView({
   isJoined,
   onBack, 
   onJoin, 
+  onLeave,
   onVotePost,
-  onCreatePost 
+  onCreatePost,
+  onPostUpdate,
+  onPostDelete
 }: CommunityViewProps) {
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [newPost, setNewPost] = useState({
     title: "",
     content: "",
     tags: [] as string[],
-    tagInput: ""
+    tagInput: "",
+    photo: ""
   })
 
-  // Filter posts for this specific community
-  const communityPosts = posts.filter(post => post.communityId === community.id)
+  // Local state for posts to handle immediate updates
+  const [localPosts, setLocalPosts] = useState<CommunityPost[]>(posts)
+
+  // Update local posts when props change
+  useEffect(() => {
+    setLocalPosts(posts)
+  }, [posts])
+
+  // Filter posts for this specific community from local state
+  const communityPosts = localPosts.filter(post => post.communityId === community.id)
 
   // Sort posts based on selected criteria
   const sortedCommunityPosts = [...communityPosts].sort((a, b) => {
@@ -70,11 +88,12 @@ export function CommunityView({
       title: newPost.title.trim(),
       content: newPost.content.trim(),
       communityId: community.id,
-      tags: newPost.tags
+      tags: newPost.tags,
+      photo: newPost.photo || undefined
     })
 
     // Reset form
-    setNewPost({ title: "", content: "", tags: [], tagInput: "" })
+    setNewPost({ title: "", content: "", tags: [], tagInput: "", photo: "" })
     setShowCreatePost(false)
   }
 
@@ -93,6 +112,97 @@ export function CommunityView({
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
     }))
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingPhoto(true)
+    
+    const fileName = `posts/${crypto.randomUUID()}-${file.name}`
+    const fileType = file.type
+    const authToken = localStorage.getItem("token")
+
+    if (!authToken) {
+      console.error("❌ Auth token not found")
+      setUploadingPhoto(false)
+      return
+    }
+
+    try {
+      // Get signed upload URL
+      const res = await fetch("https://goomi-community-backend.onrender.com/api/s3-upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ fileName, fileType }),
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error("❌ Failed to get upload URL:", errorText)
+        setUploadingPhoto(false)
+        return
+      }
+
+      const { uploadUrl, fileUrl } = await res.json()
+
+      // Upload file to S3
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fileType },
+        body: file,
+      })
+
+      // Update local state with the photo URL
+      setNewPost(prev => ({ ...prev, photo: fileUrl }))
+      
+      console.log("✅ Photo uploaded successfully")
+    } catch (err) {
+      console.error("❌ Upload failed", err)
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleRemovePhoto = () => {
+    setNewPost(prev => ({ ...prev, photo: "" }))
+  }
+
+  const handleCloseCreatePost = () => {
+    setNewPost({ title: "", content: "", tags: [], tagInput: "", photo: "" })
+    setShowCreatePost(false)
+  }
+
+  // Handle post updates locally and notify parent
+  const handlePostUpdate = (updatedPost: CommunityPost) => {
+    // Update local state immediately for smooth UX
+    setLocalPosts(prevPosts => 
+      prevPosts.map(post => 
+        post.id === updatedPost.id ? updatedPost : post
+      )
+    )
+
+    // Notify parent component if callback provided
+    if (onPostUpdate) {
+      onPostUpdate(updatedPost)
+    }
+  }
+
+  // Handle post deletion locally and notify parent
+  const handlePostDelete = (postId: string) => {
+    // Remove from local state immediately for smooth UX
+    setLocalPosts(prevPosts => 
+      prevPosts.filter(post => post.id !== postId)
+    )
+
+    // Notify parent component if callback provided
+    if (onPostDelete) {
+      onPostDelete(postId)
+    }
   }
 
   return (
@@ -163,7 +273,7 @@ export function CommunityView({
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Create New Post</h3>
                 <button
-                  onClick={() => setShowCreatePost(false)}
+                  onClick={handleCloseCreatePost}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                 >
                   <X size={20} className="text-gray-600 dark:text-gray-300" />
@@ -180,7 +290,7 @@ export function CommunityView({
                     value={newPost.title}
                     onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
                     placeholder="What's your post about?"
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
 
@@ -192,9 +302,84 @@ export function CommunityView({
                     value={newPost.content}
                     onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
                     placeholder="Share your thoughts, questions, or experiences..."
-                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
                     rows={6}
                   />
+                </div>
+
+                {/* Photo Upload Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Photo (Optional)
+                  </label>
+                  
+                  {/* Photo Preview or Upload Area */}
+                  {newPost.photo ? (
+                    <div className="relative">
+                      <Image
+                        src={newPost.photo}
+                        alt="Post photo preview"
+                        width={400}
+                        height={200}
+                        className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-600"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
+                        }}
+                      />
+                      <button
+                        onClick={handleRemovePhoto}
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        title="Remove photo"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                      <div className="space-y-3">
+                        <div className="mx-auto w-12 h-12 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                          {uploadingPhoto ? (
+                            <Loader2 className="animate-spin h-6 w-6 text-gray-600 dark:text-gray-400" />
+                          ) : (
+                            <Upload className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <label 
+                            htmlFor="post-photo-upload"
+                            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border cursor-pointer transition-colors ${
+                              uploadingPhoto 
+                                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' 
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            {uploadingPhoto ? (
+                              <>
+                                <Loader2 className="animate-spin h-4 w-4" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4" />
+                                Upload Photo
+                              </>
+                            )}
+                          </label>
+                          <input
+                            id="post-photo-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            disabled={uploadingPhoto}
+                            className="hidden"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -208,7 +393,7 @@ export function CommunityView({
                       onChange={(e) => setNewPost(prev => ({ ...prev, tagInput: e.target.value }))}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                       placeholder="Add tags..."
-                      className="flex-1 p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="flex-1 p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                     <button
                       onClick={handleAddTag}
@@ -241,15 +426,25 @@ export function CommunityView({
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleCreatePost}
-                  disabled={!newPost.title.trim() || !newPost.content.trim()}
+                  disabled={!newPost.title.trim() || !newPost.content.trim() || uploadingPhoto}
                   className="flex-1 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
                 >
-                  <Send size={18} />
-                  Post to {community.name}
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Uploading Photo...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      Post to {community.name}
+                    </>
+                  )}
                 </button>
                 <button
-                  onClick={() => setShowCreatePost(false)}
-                  className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium"
+                  onClick={handleCloseCreatePost}
+                  disabled={uploadingPhoto}
+                  className="px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -303,7 +498,14 @@ export function CommunityView({
 
         {sortedCommunityPosts.length > 0 ? (
           sortedCommunityPosts.map((post) => (
-            <PostCard key={post.id} post={post} onVote={onVotePost} userVote={userVotes[post.id]} />
+            <PostCard 
+              key={post.id} 
+              post={post} 
+              onVote={onVotePost} 
+              userVote={userVotes[post.id]}
+              onPostUpdate={handlePostUpdate}
+              onPostDelete={handlePostDelete}
+            />
           ))
         ) : (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center">

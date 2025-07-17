@@ -1,5 +1,6 @@
 "use client"
 import { LayoutDashboard, Milestone, Users, User, MessageSquare, Settings, LogOut, ClipboardCheck } from "lucide-react"
+import { LogoIconDashboard } from "../Utils/logo"
 
 interface TabNavigationProps {
   activeTab: string
@@ -20,7 +21,8 @@ export function TabNavigation({ activeTab, onTabChange, onChatToggle, isChatOpen
   return (
     <div className="fixed top-0 left-0 h-full w-72 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col p-6">
       <div className="flex items-center gap-3 mb-10">
-        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg"></div>
+        {/* <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg"></div> */}
+        <LogoIconDashboard className="w-12 h-12 bg-gradient-to-br from-orange-300 to-yellow-500 rounded-lg" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Goomi</h1>
       </div>
 

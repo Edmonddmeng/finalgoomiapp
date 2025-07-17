@@ -1,9 +1,11 @@
+
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useDashboardStats } from "@/hooks/useUser"
 import { useTasks } from "@/hooks/useTasks"
+import { useCompetition } from "@/hooks/useCompetitions"
 import { StatsCards } from "./StatsCards"
 import { AcademicDetails } from "./AcademicDetails"
 import { CompetitionDetails } from "./CompetitionDetails"
@@ -19,12 +21,46 @@ export function Dashboard() {
   const { user, isLoading: userLoading } = useAuth()
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
-  const { data: tasksData, isLoading: tasksLoading } = useTasks({ status: 'all' })
+  const { 
+    data: tasksData, 
+    isLoading: tasksLoading, 
+    refetch: refetchTasks 
+  } = useTasks({ status: 'all' })
+  
   const [selectedDetail, setSelectedDetail] = useState<DetailView>(null)
-  const [selectedCompetition, setSelectedCompetition] = useState<any>(null)
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<any>(null)
 
+  // Fetch the selected competition data (only if we have an ID)
+  const { 
+    data: selectedCompetitionData, 
+    isLoading: competitionLoading,
+    refetch: refetchSelectedCompetition 
+  } = useCompetition(selectedCompetitionId || '')
+
   const isLoading = userLoading || statsLoading || tasksLoading
+
+  // Enhanced task update handler
+  const handleTaskUpdate = useCallback(async () => {
+    console.log('🔄 Dashboard: Task update requested, refreshing tasks...')
+    try {
+      await refetchTasks()
+      console.log('✅ Dashboard: Tasks refreshed successfully')
+    } catch (error) {
+      console.error('❌ Dashboard: Failed to refresh tasks:', error)
+    }
+  }, [refetchTasks])
+
+  // Competition update handler
+  const handleCompetitionUpdate = useCallback(async () => {
+    console.log('🔄 Dashboard: Competition update requested, refreshing competition...')
+    try {
+      await refetchSelectedCompetition()
+      console.log('✅ Dashboard: Competition refreshed successfully')
+    } catch (error) {
+      console.error('❌ Dashboard: Failed to refresh competition:', error)
+    }
+  }, [refetchSelectedCompetition])
 
   if (isLoading) {
     return (
@@ -51,24 +87,60 @@ export function Dashboard() {
 
   const handleBackFromDetail = () => {
     setSelectedDetail(null)
-    setSelectedCompetition(null)
+    setSelectedCompetitionId(null)
     setSelectedActivity(null)
   }
 
+  // Handle competition selection - now stores ID instead of object
+  const handleCompetitionSelect = (competition: any) => {
+    setSelectedCompetitionId(competition.id)
+  }
+
   if (selectedDetail === "competition") {
-    if (selectedCompetition) {
+    if (selectedCompetitionId) {
+      // Show loading state while competition is being fetched
+      if (competitionLoading) {
+        return (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center space-y-3">
+              <Loader2 className="animate-spin h-12 w-12 text-purple-600 mx-auto" />
+              <p className="text-gray-500 dark:text-gray-400">Loading competition...</p>
+            </div>
+          </div>
+        )
+      }
+
+    // Show error state if competition couldn't be loaded or is incomplete
+    if (!selectedCompetitionData || !selectedCompetitionData.id || !selectedCompetitionData.name) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-3">
+            <p className="text-gray-500 dark:text-gray-400">Competition not found or failed to load</p>
+            <button
+              onClick={handleBackFromDetail}
+              className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+            >
+              ← Back to Competitions
+            </button>
+          </div>
+        </div>
+      )
+    }
+
       return (
         <CompetitionDetails
-          competition={selectedCompetition}
+          competition={selectedCompetitionData}
           tasks={tasks}
           onBack={handleBackFromDetail}
+          onTaskUpdate={handleTaskUpdate}
+          onCompetitionUpdate={handleCompetitionUpdate}
         />
       )
     }
     return (
       <CompetitionsList 
         onBack={handleBackFromDetail}
-        onSelectCompetition={setSelectedCompetition}
+        onSelectCompetition={handleCompetitionSelect}
       />
     )
   }
@@ -80,6 +152,7 @@ export function Dashboard() {
           activity={selectedActivity}
           tasks={tasks}
           onBack={handleBackFromDetail}
+          onTaskUpdate={handleTaskUpdate}
         />
       )
     }
@@ -142,7 +215,7 @@ export function Dashboard() {
         stats={stats}
         user={user}
         onDetailClick={setSelectedDetail}
-        onCompetitionSelect={setSelectedCompetition}
+        onCompetitionSelect={handleCompetitionSelect} // Updated to use the new handler
         onActivitySelect={setSelectedActivity}
       />
 

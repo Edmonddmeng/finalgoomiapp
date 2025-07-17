@@ -1,10 +1,11 @@
-import { useState } from "react"
+
+import { useState, useMemo } from "react"
 import Image from "next/image"
 import { CommunityList } from "./CommunityList"
 import { CommunityView } from "./CommunityView"
 import { PostCard } from "./PostCard"
 import type { Community as CommunityType, CommunityPost } from "@/types"
-import { Search, Hash, Users, Clock, TrendingUp, UserCheck, Loader2 } from "lucide-react"
+import { Search, Hash, Users, Clock, TrendingUp, UserCheck, Loader2, UserMinus, Pin, Lock } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
@@ -36,9 +37,23 @@ export function Community() {
   const posts = postsData || []
   const userVotes = userVotesData || {}
   
+  // Optimistic voting state for posts
+  const [optimisticPostUpdates, setOptimisticPostUpdates] = useState<Record<string, {
+    upvotes: number
+    downvotes: number
+    userVote: "up" | "down" | null
+  }>>({})
+
+  // Post management state
+  const [localPosts, setLocalPosts] = useState<CommunityPost[]>([])
+
   // Mutations
   const joinCommunityMutation = useApiMutation(
     (communityId: string) => communityService.joinCommunity(communityId)
+  )
+
+  const leaveCommunityMutation = useApiMutation(
+    (communityId: string) => communityService.leaveCommunity(communityId)
   )
   
   const votePostMutation = useApiMutation(
@@ -47,7 +62,7 @@ export function Community() {
   )
   
   const createPostMutation = useApiMutation(
-    (post: { title: string; content: string; communityId: string; tags?: string[] }) => 
+    (post: { title: string; content: string; communityId: string; tags?: string[]; photo?: string }) => 
       communityService.createPost(post)
   )
   
@@ -55,25 +70,121 @@ export function Community() {
     (community: Omit<CommunityType, "id" | "members" | "joined">) => 
       communityService.createCommunity(community)
   )
+  
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchType, setSearchType] = useState<"all" | "posts" | "communities" | "my-communities">("all")
+  const [searchType, setSearchType] = useState<"all" | "posts" | "communities" | "my-communities" | "pinned" | "locked">("all")
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityType | null>(null)
   const [sortBy, setSortBy] = useState<"recent" | "popular">("recent")
+
+  // Update local posts when data changes
+  useMemo(() => {
+    if (posts.length > 0) {
+      setLocalPosts(posts)
+    }
+  }, [posts])
+
+  // Merge posts with optimistic updates
+  const postsWithOptimisticUpdates = useMemo(() => {
+    return localPosts.map(post => {
+      const optimisticUpdate = optimisticPostUpdates[post.id]
+      if (optimisticUpdate) {
+        return {
+          ...post,
+          upvotes: optimisticUpdate.upvotes,
+          downvotes: optimisticUpdate.downvotes,
+          userVote: optimisticUpdate.userVote
+        }
+      }
+      return {
+        ...post,
+        userVote: userVotes[post.id] || null
+      }
+    })
+  }, [localPosts, optimisticPostUpdates, userVotes])
 
   // Event handlers
   const handleJoinCommunity = async (communityId: string) => {
     await joinCommunityMutation.mutateAsync(communityId)
     refetchCommunities()
   }
-  
-  const handleVotePost = async (postId: string, voteType: "up" | "down") => {
-    await votePostMutation.mutateAsync({ postId, voteType })
-    refetchPosts()
+
+  const handleLeaveCommunity = async (communityId: string) => {
+    if (window.confirm("Are you sure you want to leave this community?")) {
+      await leaveCommunityMutation.mutateAsync(communityId)
+      refetchCommunities()
+    }
   }
   
-  const handleCreatePost = async (post: { title: string; content: string; communityId: string; tags?: string[] }) => {
-    await createPostMutation.mutateAsync(post)
-    refetchPosts()
+  const handleVotePost = async (postId: string, voteType: "up" | "down") => {
+    const post = localPosts.find(p => p.id === postId)
+    if (!post) return
+
+    const currentOptimistic = optimisticPostUpdates[postId]
+    const currentVote = currentOptimistic?.userVote || userVotes[postId] || null
+    const currentUpvotes = currentOptimistic?.upvotes || post.upvotes
+    const currentDownvotes = currentOptimistic?.downvotes || post.downvotes
+
+    let newUpvotes = currentUpvotes
+    let newDownvotes = currentDownvotes
+    let newVote: "up" | "down" | null = voteType
+
+    // Remove previous vote if it exists
+    if (currentVote === "up") {
+      newUpvotes -= 1
+    } else if (currentVote === "down") {
+      newDownvotes -= 1
+    }
+
+    // If clicking the same vote, remove it (toggle off)
+    if (currentVote === voteType) {
+      newVote = null
+    } else {
+      // Add new vote
+      if (voteType === "up") {
+        newUpvotes += 1
+      } else {
+        newDownvotes += 1
+      }
+    }
+
+    // Update optimistic state immediately
+    setOptimisticPostUpdates(prev => ({
+      ...prev,
+      [postId]: {
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+        userVote: newVote
+      }
+    }))
+
+    try {
+      // Call the actual API
+      await votePostMutation.mutateAsync({ postId, voteType })
+      
+      // After successful API call, we can either:
+      // 1. Keep the optimistic update (current approach)
+      // 2. Or refetch and clear optimistic state
+      // For now, we'll keep optimistic state and let it sync naturally
+      
+    } catch (error) {
+      // On error, revert the optimistic update
+      setOptimisticPostUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[postId]
+        return newState
+      })
+      console.error('Failed to vote on post:', error)
+    }
+  }
+  
+  const handleCreatePost = async (post: { title: string; content: string; communityId: string; tags?: string[]; photo?: string }) => {
+    try {
+      const newPost = await createPostMutation.mutateAsync(post)
+      // Add new post to local state
+      setLocalPosts(prevPosts => [newPost, ...prevPosts])
+    } catch (error) {
+      console.error('Failed to create post:', error)
+    }
   }
   
   const handleCreateCommunity = async (community: Omit<CommunityType, "id" | "members" | "joined">) => {
@@ -81,14 +192,39 @@ export function Community() {
     refetchCommunities()
   }
 
+  // Handle post updates from PostCard
+  const handlePostUpdate = (updatedPost: CommunityPost) => {
+    setLocalPosts(prevPosts => 
+      prevPosts.map(post => 
+        post.id === updatedPost.id ? updatedPost : post
+      )
+    )
+  }
+
+  // Handle post deletion from PostCard
+  const handlePostDelete = (postId: string) => {
+    setLocalPosts(prevPosts => 
+      prevPosts.filter(post => post.id !== postId)
+    )
+  }
+
   // Get joined communities
   const joinedCommunities = communities.filter(c => c.joined)
   const joinedCommunityIds = joinedCommunities.map(c => c.id)
 
   // Filter posts based on search and view type
-  const filteredPosts = posts.filter(post => {
-    if (searchType === "communities" || searchType === "my-communities") return false // Don't show posts when viewing communities
+  const filteredPosts = postsWithOptimisticUpdates.filter(post => {
+    // Don't show posts when viewing communities
+    if (searchType === "communities" || searchType === "my-communities") return false 
     
+    // Filter by post type
+    if (searchType === "pinned") {
+      if (!post.isPinned) return false
+    } else if (searchType === "locked") {
+      if (!post.isLocked) return false
+    }
+    
+    // Apply search term filter
     if (!searchTerm) return true // Show all posts when not searching
     const searchLower = searchTerm.toLowerCase()
     return (
@@ -102,7 +238,7 @@ export function Community() {
   // Filter communities based on search and view type
   const filteredCommunities = communities.filter(community => {
     if (searchType === "my-communities") return community.joined // Show only joined communities
-    if (searchType === "posts") return true // Show all communities when searching posts only
+    if (searchType === "posts" || searchType === "pinned" || searchType === "locked") return true // Show all communities when searching posts only
     if (!searchTerm) return true // Show all communities when not searching
     const searchLower = searchTerm.toLowerCase()
     return (
@@ -151,7 +287,7 @@ export function Community() {
   }
 
   // Calculate popular users based on total upvotes
-  const userStats = posts.reduce((acc, post) => {
+  const userStats = postsWithOptimisticUpdates.reduce((acc, post) => {
     const authorId = post.author.id
     if (!acc[authorId]) {
       acc[authorId] = {
@@ -175,13 +311,16 @@ export function Community() {
     return (
       <CommunityView
         community={selectedCommunity}
-        posts={posts}
+        posts={postsWithOptimisticUpdates}
         userVotes={userVotes}
         isJoined={selectedCommunity.joined}
         onBack={() => setSelectedCommunity(null)}
         onJoin={handleJoinCommunity}
+        onLeave={handleLeaveCommunity}
         onVotePost={handleVotePost}
         onCreatePost={handleCreatePost}
+        onPostUpdate={handlePostUpdate}
+        onPostDelete={handlePostDelete}
       />
     )
   }
@@ -202,8 +341,12 @@ export function Community() {
               <span className="text-sm ml-2 text-white/90">Communities Joined</span>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
-              <span className="text-2xl font-bold">{posts.length}</span>
+              <span className="text-2xl font-bold">{localPosts.length}</span>
               <span className="text-sm ml-2 text-white/90">Active Discussions</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/30">
+              <span className="text-2xl font-bold">{localPosts.filter(p => p.isPinned).length}</span>
+              <span className="text-sm ml-2 text-white/90">Pinned Posts</span>
             </div>
           </div>
         </div>
@@ -248,6 +391,28 @@ export function Community() {
               Posts
             </button>
             <button
+              onClick={() => setSearchType("pinned")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                searchType === "pinned"
+                  ? "bg-teal-500 text-white"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+              }`}
+            >
+              <Pin size={16} />
+              Pinned
+            </button>
+            <button
+              onClick={() => setSearchType("locked")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                searchType === "locked"
+                  ? "bg-teal-500 text-white"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+              }`}
+            >
+              <Lock size={16} />
+              Locked Posts
+            </button>
+            <button
               onClick={() => setSearchType("communities")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 searchType === "communities"
@@ -280,6 +445,8 @@ export function Community() {
                 </span>
               )}
               {searchType === "posts" && <span>Found {filteredPosts.length} posts</span>}
+              {searchType === "pinned" && <span>Found {filteredPosts.length} pinned posts</span>}
+              {searchType === "locked" && <span>Found {filteredPosts.length} locked posts</span>}
               {searchType === "communities" && <span>Found {filteredCommunities.length} communities</span>}
               {searchType === "my-communities" && <span>Found {filteredCommunities.length} joined communities</span>}
             </div>
@@ -325,13 +492,32 @@ export function Community() {
         <div className={`${searchType === "all" ? "lg:col-span-2" : ""} space-y-6`}>
           {searchType !== "communities" && searchType !== "my-communities" && sortedPosts.length > 0 ? (
             sortedPosts.map((post) => (
-              <PostCard key={post.id} post={post} onVote={handleVotePost} userVote={userVotes[post.id]} />
+              <PostCard 
+                key={post.id} 
+                post={post} 
+                onVote={handleVotePost} 
+                userVote={post.userVote}
+                onPostUpdate={handlePostUpdate}
+                onPostDelete={handlePostDelete}
+              />
             ))
-          ) : searchType !== "communities" && searchType !== "my-communities" && searchTerm ? (
+          ) : searchType !== "communities" && searchType !== "my-communities" && (searchTerm || searchType !== "all") ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center">
               <Search className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-600 dark:text-gray-400">No posts found matching "{searchTerm}"</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Try different keywords or browse communities</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                {searchTerm 
+                  ? `No ${searchType === "pinned" ? "pinned " : searchType === "locked" ? "locked " : ""}posts found matching "${searchTerm}"`
+                  : `No ${searchType === "pinned" ? "pinned " : searchType === "locked" ? "locked " : ""}posts found`
+                }
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                {searchType === "pinned" 
+                  ? "No posts have been pinned yet"
+                  : searchType === "locked"
+                  ? "No posts are currently locked"
+                  : "Try different keywords or browse communities"
+                }
+              </p>
             </div>
           ) : searchType === "communities" || searchType === "my-communities" ? (
             filteredCommunities.length > 0 ? (
@@ -357,21 +543,39 @@ export function Community() {
                         <div className="mt-3 flex items-center justify-between">
                           <span className="text-sm text-gray-500 dark:text-gray-400">
                             <Users size={14} className="inline mr-1" />
-                            {community.members.toLocaleString()} members
+                            {(community.members || 0).toLocaleString()} members
                           </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleJoinCommunity(community.id)
-                            }}
-                            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-                              community.joined
-                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300"
-                            }`}
-                          >
-                            {community.joined ? "Joined ✓" : "Join"}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (community.joined) {
+                                  handleLeaveCommunity(community.id)
+                                } else {
+                                  handleJoinCommunity(community.id)
+                                }
+                              }}
+                              className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                                community.joined
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300"
+                              }`}
+                            >
+                              {community.joined ? "Joined ✓" : "Join"}
+                            </button>
+                            {community.joined && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleLeaveCommunity(community.id)
+                                }}
+                                className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 transition-all"
+                                title="Leave community"
+                              >
+                                <UserMinus size={12} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -387,7 +591,14 @@ export function Community() {
             )
           ) : (
             sortedPosts.map((post) => (
-              <PostCard key={post.id} post={post} onVote={handleVotePost} userVote={userVotes[post.id]} />
+              <PostCard 
+                key={post.id} 
+                post={post} 
+                onVote={handleVotePost} 
+                userVote={post.userVote}
+                onPostUpdate={handlePostUpdate}
+                onPostDelete={handlePostDelete}
+              />
             ))
           )}
         </div>
@@ -397,7 +608,8 @@ export function Community() {
           <div className="lg:col-span-1 space-y-6">
             <CommunityList 
               communities={filteredCommunities.slice(0, 6)} 
-              onJoin={handleJoinCommunity} 
+              onJoin={handleJoinCommunity}
+              onLeave={handleLeaveCommunity}
               onSelectCommunity={setSelectedCommunity}
             />
             

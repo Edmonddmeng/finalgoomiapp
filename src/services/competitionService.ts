@@ -19,6 +19,18 @@ class CompetitionService {
     return response.data
   }
 
+    // New method to complete a competition
+    async completeCompetition(id: string): Promise<Competition> {
+      const response = await apiClient.patch<Competition>(`/competitions/${id}/complete`)
+      return response.data
+    }
+  
+    // New method to uncomplete a competition
+    async uncompleteCompetition(id: string): Promise<Competition> {
+      const response = await apiClient.patch<Competition>(`/competitions/${id}/uncomplete`)
+      return response.data
+    }
+
   async getCompetition(id: string): Promise<Competition> {
     const response = await apiClient.get<Competition>(`/competitions/${id}`)
     return response.data

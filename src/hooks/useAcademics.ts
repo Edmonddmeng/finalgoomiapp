@@ -7,6 +7,14 @@ import {
   UpdateCourseRequest 
 } from '@/types/academic'
 
+// NEW: Enhanced GPA Analytics Hooks
+export function useOverallGPA() {
+  return useApiQuery(
+    () => academicService.getOverallGPA(),
+    ['gpa-overall']
+  )
+}
+
 // Terms
 export function useAcademicTerms() {
   return useApiQuery(() => academicService.getTerms())

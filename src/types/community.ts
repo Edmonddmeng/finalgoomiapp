@@ -24,44 +24,47 @@ export type CommunityCategory =
   | "career"
   | "general"
 
-export interface CommunityPost {
-  id: string
-  communityId: string
-  author: {
+  export interface CommunityPost {
     id: string
-    name: string
-    avatar?: string
+    communityId: string
+    author: {
+      id: string
+      name: string
+      avatar?: string
+    }
+    title: string
+    content: string
+    tags?: string[]
+    upvotes: number
+    downvotes: number
+    userVote?: 'up' | 'down' | null
+    comments: PostComment[]
+    photoUrl?: string 
+    commentCount?: number // Add this field for the total comment count
+    isPinned: boolean
+    isLocked: boolean
+    createdAt: string
+    updatedAt: string
   }
-  title: string
-  content: string
-  tags?: string[]
-  upvotes: number
-  downvotes: number
-  userVote?: 'up' | 'down' | null
-  comments: PostComment[]
-  isPinned: boolean
-  isLocked: boolean
-  createdAt: string
-  updatedAt: string
-}
 
-export interface PostComment {
-  id: string
-  postId: string
-  author: {
+  export interface PostComment {
     id: string
-    name: string
-    avatar?: string
+    postId: string
+    author: {
+      id: string
+      name: string
+      avatar?: string
+    }
+    content: string
+    upvotes: number
+    downvotes: number
+    userVote?: 'up' | 'down' | null
+    parentId?: string // For nested comments
+    replies?: PostComment[]
+    // Remove commentCount from here - it belongs on CommunityPost, not PostComment
+    createdAt: string
+    updatedAt: string
   }
-  content: string
-  upvotes: number
-  downvotes: number
-  userVote?: 'up' | 'down' | null
-  parentId?: string // For nested comments
-  replies?: PostComment[]
-  createdAt: string
-  updatedAt: string
-}
 
 export interface CommunityStats {
   totalCommunities: number

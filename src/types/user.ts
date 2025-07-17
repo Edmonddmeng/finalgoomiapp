@@ -13,6 +13,7 @@ export interface User {
   currentStreak: number
   totalPoints: number
   achievements: Achievement[]
+  uncompletedAchievements: Achievement[]
   stats: UserStats
   createdAt: string
   updatedAt: string
@@ -23,7 +24,7 @@ export interface User {
 export interface UserStats {
   totalCompetitions: number
   totalActivities: number
-  averageGPA: number
+  overallGPA: number
   tasksCompleted: number
   hoursStudied?: number
   communityPosts?: number

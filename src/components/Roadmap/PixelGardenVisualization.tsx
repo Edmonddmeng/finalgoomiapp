@@ -216,15 +216,15 @@ export function PixelGardenVisualization({ progressLevel }: PixelGardenVisualiza
         <div className="grid grid-cols-3 gap-2 text-xs">
           {gardenStage >= 0 && (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-green-500 dark:bg-green-600 rounded-sm"></div>
                 <span>Grass</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-amber-700 dark:bg-amber-800 rounded-sm"></div>
                 <span>Soil</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-stone-400 dark:bg-stone-600 rounded-sm"></div>
                 <span>Path</span>
               </div>
@@ -232,11 +232,11 @@ export function PixelGardenVisualization({ progressLevel }: PixelGardenVisualiza
           )}
           {gardenStage >= 1 && (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-red-500 dark:bg-red-600 rounded-sm"></div>
                 <span>Flowers</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-green-600 dark:bg-green-700 rounded-sm"></div>
                 <span>Bushes</span>
               </div>
@@ -244,7 +244,7 @@ export function PixelGardenVisualization({ progressLevel }: PixelGardenVisualiza
           )}
           {gardenStage >= 2 && (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-green-700 dark:bg-green-800 rounded-sm"></div>
                 <span>Trees</span>
               </div>
@@ -252,11 +252,11 @@ export function PixelGardenVisualization({ progressLevel }: PixelGardenVisualiza
           )}
           {gardenStage >= 3 && (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-blue-400 dark:bg-blue-500 rounded-sm"></div>
                 <span>Water</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black">
                 <div className="w-3 h-3 bg-gray-500 dark:bg-gray-600 rounded-sm"></div>
                 <span>Rocks</span>
               </div>

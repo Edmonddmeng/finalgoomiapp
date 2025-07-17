@@ -11,6 +11,8 @@ export interface Competition {
   notes?: string
   insights?: CompetitionInsight[]
   aiInsights?: AICompetitionInsight[]
+  completed?: boolean 
+  completedAt?: string 
   createdAt: string
   updatedAt: string
 }

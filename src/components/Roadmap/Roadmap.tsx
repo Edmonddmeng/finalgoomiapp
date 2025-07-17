@@ -1,73 +1,5 @@
-// import { useState } from "react"
-// import { useAuth } from "@/contexts/AuthContext"
-// import { useTasks } from "@/hooks/useTasks"
-// import { SimplePixelVisualization } from "./SimplePixelVisualization"
-// import { TaskList } from "./TaskList"
-// import { Calendar } from "./Calendar"
-// import { Loader2 } from "lucide-react"
 
-// export function Roadmap() {
-//   const { user } = useAuth()
-//   const { data: tasksData, isLoading } = useTasks({ status: 'all' })
-//   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  
-//   const tasks = tasksData || []
-//   const completedTasks = tasks.filter(task => task.completed).length
-//   const totalTasks = tasks.length
-//   const upcomingTasks = tasks.filter(task => {
-//     if (!task.dueDate) return false
-//     return new Date(task.dueDate) > new Date()
-//   })
-
-//   if (isLoading) {
-//     return (
-//       <div className="flex items-center justify-center min-h-[400px]">
-//         <div className="text-center space-y-3">
-//           <Loader2 className="animate-spin h-12 w-12 text-purple-600 mx-auto" />
-//           <p className="text-gray-500 dark:text-gray-400">Loading your roadmap...</p>
-//         </div>
-//       </div>
-//     )
-//   }
-
-//   return (
-//     <div className="space-y-8">
-//       {/* Title Card Section */}
-//       <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-3xl p-8 text-white shadow-xl">
-//         <div className="max-w-4xl">
-//           <h1 className="text-4xl font-bold mb-3">Your Achievement Roadmap</h1>
-//           <p className="text-lg text-white/90 leading-relaxed">
-//             Visualize your growth journey, manage your goals, and track your progress. Every task completed 
-//             helps you grow stronger and reach new heights.
-//           </p>
-//         </div>
-//       </div>
-
-//       <SimplePixelVisualization completedTasks={completedTasks} totalTasks={totalTasks} />
-      
-//       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-//         <div className="lg:col-span-2">
-//           <TaskList 
-//             tasks={tasks}
-//             selectedDate={selectedDate}
-//             onClearSelectedDate={() => setSelectedDate(null)}
-//           />
-//         </div>
-//         <div className="lg:col-span-1">
-//           <Calendar 
-//             tasks={tasks}
-//             upcomingEvents={upcomingTasks}
-//             selectedDate={selectedDate}
-//             onDateSelect={setSelectedDate}
-//           />
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useTasks } from "@/hooks/useTasks"
 import { SimplePixelVisualization } from "./SimplePixelVisualization"
@@ -78,8 +10,9 @@ import { TreeVisualization } from "./TreeVisualization"
 import { TaskList } from "./TaskList"
 import { Calendar } from "./Calendar"
 import { Loader2, Palette, Settings2, X, Shuffle } from "lucide-react"
+import { SolarSystemVisualization } from "./ConstellationVisualization"
 
-type VisualizationType = 'simple' | 'town' | 'mosaic' | 'garden' | 'tree'
+type VisualizationType = 'simple' | 'town' | 'mosaic' | 'garden' | 'tree' | 'solar-system'
 
 const visualizationOptions = [
   { 
@@ -116,12 +49,24 @@ const visualizationOptions = [
     icon: '🌳', 
     description: 'Grow a lush forest',
     color: 'bg-emerald-500'
+  },
+  { 
+    id: 'solar-system', 
+    name: 'Solar System', 
+    icon: '🌌', 
+    description: 'See your progress as a solar system',
+    color: 'bg-purple-500'
   }
 ]
 
 export function Roadmap() {
   const { user } = useAuth()
-  const { data: tasksData, isLoading } = useTasks({ status: 'all' })
+  const { 
+    data: tasksData, 
+    isLoading, 
+    refetch: refetchTasks 
+  } = useTasks({ status: 'all' })
+  
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedVisualization, setSelectedVisualization] = useState<VisualizationType>('simple')
   const [showVisualizationSelector, setShowVisualizationSelector] = useState(false)
@@ -134,6 +79,17 @@ export function Roadmap() {
       setSelectedVisualization(saved as VisualizationType)
     }
   }, [])
+
+  // Enhanced task update handler - this is the key fix!
+  const handleTaskUpdate = useCallback(async () => {
+    console.log('🔄 Roadmap: Task update requested, refreshing tasks...')
+    try {
+      await refetchTasks()
+      console.log('✅ Roadmap: Tasks refreshed successfully')
+    } catch (error) {
+      console.error('❌ Roadmap: Failed to refresh tasks:', error)
+    }
+  }, [refetchTasks])
 
   // Save visualization preference
   const handleVisualizationChange = (newVisualization: VisualizationType) => {
@@ -203,6 +159,8 @@ export function Roadmap() {
               return <PixelGardenVisualization progressLevel={progressLevel} />
             case 'tree':
               return <TreeVisualization progressLevel={progressLevel} />
+            case 'solar-system':
+              return <SolarSystemVisualization progressLevel={progressLevel} />
             default:
               return <SimplePixelVisualization completedTasks={completedTasks} totalTasks={totalTasks} />
           }
@@ -326,10 +284,7 @@ export function Roadmap() {
             tasks={tasks}
             selectedDate={selectedDate} 
             onClearSelectedDate={() => setSelectedDate(null)}
-            onRefreshNeeded={() => {
-              // This will trigger a re-render of the TaskList component
-              console.log('🔄 Roadmap component received refresh request')
-            }}
+            onRefreshNeeded={handleTaskUpdate} // Pass the proper callback
           />
         </div>
         <div className="lg:col-span-1">
