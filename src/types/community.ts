@@ -27,6 +27,7 @@ export type CommunityCategory =
   export interface CommunityPost {
     id: string
     communityId: string
+    communityName: string
     author: {
       id: string
       name: string

@@ -19,6 +19,9 @@ export interface User {
   updatedAt: string
   sat_score?: number
   act_score?: number
+  communityName?: string
+  streakHigh?: number
+  streakDate?: string
 }
 
 export interface UserStats {
