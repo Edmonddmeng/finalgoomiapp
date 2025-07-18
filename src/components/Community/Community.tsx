@@ -11,10 +11,46 @@ import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
 import { useConfirm } from "@/components/Utils/ConfirmDialog"
+import ProfileModal from "@/components/ProfileModal/ProfileModal"
+import ChatModal from "@/components/ChatModal/ChatModal"
 
 export function Community() {
   const { user } = useAuth()
   const { confirm } = useConfirm()
+
+      // Add modal state
+      const [profileModalOpen, setProfileModalOpen] = useState(false)
+      const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+      
+        // Chat modal state
+  const [chatModalOpen, setChatModalOpen] = useState(false)
+  const [chatTargetUserId, setChatTargetUserId] = useState<string | null>(null)
+  const [chatTargetUserName, setChatTargetUserName] = useState<string | null>(null)
+  
+
+        // Add handler for opening profile modal
+        const handleOpenProfile = (userId: string) => {
+          setSelectedUserId(userId)
+          setProfileModalOpen(true)
+        }
+      
+        const handleCloseProfile = () => {
+          setProfileModalOpen(false)
+          setSelectedUserId(null)
+        }
+
+          // Chat modal handlers
+  const handleOpenChat = (userId: string, userName?: string) => {
+    setChatTargetUserId(userId)
+    setChatTargetUserName(userName || null)
+    setChatModalOpen(true)
+  }
+
+  const handleCloseChat = () => {
+    setChatModalOpen(false)
+    setChatTargetUserId(null)
+    setChatTargetUserName(null)
+  }
   
   // Fetch data from API
   const { data: communitiesData, isLoading: communitiesLoading, refetch: refetchCommunities } = useApiQuery(
@@ -510,6 +546,8 @@ export function Community() {
                 userVote={post.userVote}
                 onPostUpdate={handlePostUpdate}
                 onPostDelete={handlePostDelete}
+                onOpenProfile={handleOpenProfile}
+                onCloseProfile={handleCloseProfile}
               />
             ))
           ) : searchType !== "communities" && searchType !== "my-communities" && (searchTerm || searchType !== "all") ? (
@@ -666,6 +704,20 @@ export function Community() {
           </div>
         )}
       </div>
+            {/* Add the Profile Modal */}
+      <ProfileModal 
+        isOpen={profileModalOpen}
+        onClose={handleCloseProfile}
+        userId={selectedUserId}
+      />
+            {/* Chat Modal */}
+            <ChatModal 
+        isOpen={chatModalOpen}
+        onClose={handleCloseChat}
+        targetUserId={chatTargetUserId}
+        targetUserName={chatTargetUserName || undefined}
+      />
     </div>
+
   )
 }

@@ -1,5 +1,6 @@
+// hooks/useUser.ts (updated)
 import { useAuth } from '@/contexts/AuthContext'
-import { userService } from '@/services/userService'
+import { userService, UserProfile } from '@/services/userService'
 import { useApiQuery, useApiMutation } from './useApiQuery'
 import { User, UserSettings } from '@/types/user'
 import { DashboardStats } from '@/types'
@@ -17,6 +18,16 @@ export function useUserProfile() {
   )
 
   return query
+}
+
+export function useUserById(userId: string) {
+  return useApiQuery(
+    () => userService.getUserById(userId),
+    [userId],
+    {
+      enabled: !!userId
+    }
+  )
 }
 
 export function useUpdateProfile() {

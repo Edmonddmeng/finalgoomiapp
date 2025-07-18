@@ -1,12 +1,25 @@
+// services/userService.ts (updated)
 import { apiClient } from '@/lib/apiClient'
 import { User, UserSettings, UserStats } from '@/types/user'
 import { DashboardStats } from '@/types'
+
+// Extended user type for profile view
+export interface UserProfile extends User {
+  postsCount?: number
+  commentsCount?: number
+  created_at: string
+}
 
 class UserService {
   // Profile operations
   async getProfile(): Promise<User> {
     const response = await apiClient.get<User>('/users/profile')
     console.log("response", response.data)
+    return response.data
+  }
+
+  async getUserById(userId: string): Promise<UserProfile> {
+    const response = await apiClient.get<UserProfile>(`/users/${userId}`)
     return response.data
   }
 

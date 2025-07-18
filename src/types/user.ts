@@ -22,6 +22,7 @@ export interface User {
   communityName?: string
   streakHigh?: number
   streakDate?: string
+  profile_picture?: string
 }
 
 export interface UserStats {

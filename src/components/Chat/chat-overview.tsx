@@ -1,8 +1,8 @@
 
+// Optimized ChatOverview component - removes duplicate Stream Chat connection
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { StreamChat } from "stream-chat"
 import { Input } from "@/components/Utils/input"
@@ -11,11 +11,11 @@ import { Loader2 } from "lucide-react"
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 import { apiClient } from "@/lib/apiClient"
+import ChatModal from "@/components/ChatModal/ChatModal"
 
 dayjs.extend(relativeTime)
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY!
-const chatClient = StreamChat.getInstance(apiKey)
 
 interface Conversation {
   userId: string
@@ -37,6 +37,22 @@ export function ChatOverview() {
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [chatModalOpen, setChatModalOpen] = useState(false)
+  const [chatTargetUserId, setChatTargetUserId] = useState<string | null>(null)
+  const [chatTargetUserName, setChatTargetUserName] = useState<string | null>(null) 
+
+  // Chat modal handlers
+  const handleOpenChat = (userId: string, userName?: string) => {
+    setChatTargetUserId(userId)
+    setChatTargetUserName(userName || null)
+    setChatModalOpen(true)
+  }
+
+  const handleCloseChat = () => {
+    setChatModalOpen(false)
+    setChatTargetUserId(null)
+    setChatTargetUserName(null)
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -50,29 +66,39 @@ export function ChatOverview() {
       setError(null)
       
       try {
-        // Get Stream Chat token from your backend
-        // Fix: Send userId directly, not wrapped in data object
-        const tokenRes = await apiClient.post('/chat/token', {
-          userId: user.id
-        })
-
-        if (tokenRes.status !== 200) {
-          throw new Error("Failed to get chat token")
+        // Check if Stream Chat is already connected (from global hook)
+        const chatClient = StreamChat.getInstance(apiKey)
+        
+        let needsConnection = false
+        
+        // Check if client is already connected
+        if (!chatClient.user) {
+          needsConnection = true
         }
 
-        const { token: streamToken } = tokenRes.data
-        
-        // Connect to Stream Chat
-        await chatClient.connectUser(
-          { 
-            id: user.id, 
-            name: user.username,
-            image: user.avatar 
-          }, 
-          streamToken
-        )
+        // Connect if needed
+        if (needsConnection) {
+          const tokenRes = await apiClient.post('/chat/token', {
+            userId: user.id
+          })
 
-        // Query channels
+          if (tokenRes.status !== 200) {
+            throw new Error("Failed to get chat token")
+          }
+
+          const { token: streamToken } = tokenRes.data
+          
+          await chatClient.connectUser(
+            { 
+              id: user.id, 
+              name: user.username,
+              image: user.avatar 
+            }, 
+            streamToken
+          )
+        }
+
+        // Query channels to get conversation data
         const channels = await chatClient.queryChannels({
           type: "messaging",
           members: { $in: [user.id] }
@@ -104,7 +130,6 @@ export function ChatOverview() {
 
         // Fetch additional user profile data
         if (userIds.length > 0) {
-          // Fix: Send userIds directly, not wrapped in data object
           const profileRes = await apiClient.post('/users/batch-info', {
             userIds
           })
@@ -138,10 +163,7 @@ export function ChatOverview() {
 
     init()
 
-    // Cleanup function
-    return () => {
-      chatClient.disconnectUser().catch(console.error)
-    }
+    // Note: We don't disconnect here since the global hook manages the connection
   }, [user])
 
   // Filter conversations based on search term
@@ -173,7 +195,7 @@ export function ChatOverview() {
 
   return (
     <div className="max-w-3xl mx-auto mt-12 px-4">
-      <h1 className="text-3xl font-semibold text-center text-gray-800 mb-6">
+      <h1 className="text-3xl font-semibold text-center text-gray-800 dark:text-white mb-6">
         Your Messages
       </h1>
 
@@ -213,34 +235,34 @@ export function ChatOverview() {
         <ul className="space-y-4">
           {paginated.map(({ userId, username, unread, avatar, lastMessage, lastMessageAt, isOnline }) => (
             <li key={userId}>
-              <Link
-                href={`/chat/${userId}`}
-                className="flex justify-between items-center p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow duration-200"
+              <button
+                onClick={() => handleOpenChat(userId, username)}
+                className="w-full flex justify-between items-center p-4 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-left"
               >
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={avatar} alt={username} />
-                      <AvatarFallback className="bg-gray-200 text-gray-700">
+                      <AvatarFallback className="bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-200">
                         {username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
-                    <span className="font-medium text-gray-900 truncate">
+                    <span className="font-medium text-gray-900 dark:text-white truncate">
                       {username}
                     </span>
-                    <span className="text-sm text-gray-600 truncate max-w-xs">
+                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-xs">
                       {lastMessage}
                     </span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
                   {lastMessageAt && (
-                    <span className="text-xs text-gray-400 mb-1">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mb-1">
                       {dayjs(lastMessageAt).fromNow()}
                     </span>
                   )}
@@ -250,7 +272,7 @@ export function ChatOverview() {
                     </span>
                   )}
                 </div>
-              </Link>
+              </button>
             </li>
           ))}
         </ul>
@@ -261,22 +283,30 @@ export function ChatOverview() {
           <button
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(prev => prev - 1)}
-            className="px-4 py-2 rounded border text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 rounded border text-sm hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Previous
           </button>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             Page {currentPage} of {totalPages}
           </span>
           <button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(prev => prev + 1)}
-            className="px-4 py-2 rounded border text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 rounded border text-sm hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Next
           </button>
         </div>
       )}
+
+      {/* Chat Modal */}
+      <ChatModal 
+        isOpen={chatModalOpen}
+        onClose={handleCloseChat}
+        targetUserId={chatTargetUserId}
+        targetUserName={chatTargetUserName || undefined}
+      />
     </div>
   )
 }

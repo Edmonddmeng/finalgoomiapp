@@ -2,6 +2,7 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { ChevronUp, ChevronDown, MessageCircle, Share, MoreHorizontal, Send, Heart, Reply, Edit2, Trash2, Flag, Pin, Lock } from "lucide-react"
 import type { CommunityPost, PostComment } from "@/types"
 import { useAuth } from "@/contexts/AuthContext"
@@ -9,6 +10,7 @@ import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
 import { useConfirm } from "@/components/Utils/ConfirmDialog"
+import ProfileModal from '@/components/ProfileModal/ProfileModal'
 
 interface PostCardProps {
   post: CommunityPost
@@ -16,6 +18,8 @@ interface PostCardProps {
   userVote?: "up" | "down" | null
   onPostUpdate?: (updatedPost: CommunityPost) => void
   onPostDelete?: (postId: string) => void
+  onOpenProfile?: (userId: string) => void
+  onCloseProfile?: () => void
 }
 
 interface CommentItemProps {
@@ -27,6 +31,7 @@ interface CommentItemProps {
   onReportComment: (commentId: string, reason: string) => void
   currentUserId?: string
   level?: number
+  onOpenProfile?: (userId: string) => void
 }
 
 function CommentItem({ 
@@ -37,8 +42,10 @@ function CommentItem({
   onDeleteComment,
   onReportComment,
   currentUserId,
-  level = 0 
+  level = 0,
+  onOpenProfile
 }: CommentItemProps) {
+  const router = useRouter()
   const [showReplyForm, setShowReplyForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [showReportForm, setShowReportForm] = useState(false)
@@ -109,6 +116,16 @@ function CommentItem({
     onVoteComment(comment.id, vote)
   }
 
+  // Handle avatar click to navigate to profile
+  const handleAvatarClick = (e: React.MouseEvent, authorId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+        // Use modal instead of navigation
+        if (onOpenProfile) {
+          onOpenProfile(authorId)
+        }
+  }
+
   const isOwnComment = currentUserId === comment.author.id
   const maxLevel = 3 // Maximum nesting level
 
@@ -122,10 +139,16 @@ function CommentItem({
               alt={comment.author.name}
               width={32}
               height={32}
-              className="rounded-full"
+              className="rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+              onClick={(e) => handleAvatarClick(e, comment.author.id)}
             />
             <div>
-              <p className="font-medium text-sm text-gray-900 dark:text-white">{comment.author.name}</p>
+              <p 
+                className="font-medium text-sm text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                onClick={(e) => handleAvatarClick(e, comment.author.id)}
+              >
+                {comment.author.name}
+              </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {new Date(comment.createdAt).toLocaleDateString()}
               </p>
@@ -323,6 +346,7 @@ function CommentItem({
               onReportComment={onReportComment}
               currentUserId={currentUserId}
               level={level + 1}
+              onOpenProfile={onOpenProfile}
             />
           ))}
         </div>
@@ -331,8 +355,9 @@ function CommentItem({
   )
 }
 
-export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete }: PostCardProps) {
+export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete, onOpenProfile, onCloseProfile }: PostCardProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const [showComments, setShowComments] = useState(false)
   const [showCommentForm, setShowCommentForm] = useState(false)
   const [newComment, setNewComment] = useState("")
@@ -348,6 +373,21 @@ export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete }:
   // Local state for optimistic updates
   const [localPost, setLocalPost] = useState(post)
   const { confirm } = useConfirm()
+
+    // Add modal state
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  
+    // Add handler for opening profile modal
+    const handleOpenProfile = (userId: string) => {
+      setSelectedUserId(userId)
+      setProfileModalOpen(true)
+    }
+  
+    const handleCloseProfile = () => {
+      setProfileModalOpen(false)
+      setSelectedUserId(null)
+    }
 
   // Update local state when post prop changes
   useEffect(() => {
@@ -481,6 +521,15 @@ export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete }:
 
   const handleImageError = () => {
     setImageError(true)
+  }
+
+  // Handle avatar click to navigate to profile
+  const handleAvatarClick = (e: React.MouseEvent, authorId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onOpenProfile) {
+      onOpenProfile(authorId)
+    }
   }
 
   // Post management handlers
@@ -631,14 +680,20 @@ export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete }:
               alt={localPost.author.name}
               width={48}
               height={48}
-              className="rounded-full"
+              className="rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+              onClick={(e) => handleAvatarClick(e, localPost.author.id)}
               onError={(e) => {
                 e.currentTarget.src = "/placeholder.svg"
               }}
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">{localPost.author.name}</h3>
+                <h3 
+                  className="font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  onClick={(e) => handleAvatarClick(e, localPost.author.id)}
+                >
+                  {localPost.author.name}
+                </h3>
                 <span className="text-gray-500 dark:text-gray-400">•</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {new Date(localPost.createdAt).toLocaleDateString()}
@@ -951,6 +1006,7 @@ export function PostCard({ post, onVote, userVote, onPostUpdate, onPostDelete }:
                     onDeleteComment={handleDeleteComment}
                     onReportComment={handleReportComment}
                     currentUserId={user?.id}
+                    onOpenProfile={onOpenProfile}
                   />
                 ))}
               </div>

@@ -11,10 +11,15 @@ import { Settings } from "@/components/Settings/Settings"
 import { Evaluations } from "@/components/Evaluations/Evaluations"
 import { AIChat } from "@/components/AIChat/AIChat"
 import { ChatOverview } from "@/components/Chat/chat-overview"
+import SavedProfile from "@/components/SavedProfile/SavedProfile"
+import { useGlobalUnreadMessages } from "@/hooks/useGlobalUnreadMessages"
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const { unreadCount, isLoading, error } = useGlobalUnreadMessages()
+
+
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -32,6 +37,8 @@ function AppContent() {
         return <Settings />
       case "chat":
         return <ChatOverview />
+      case "saved-profiles":
+        return <SavedProfile />
       default:
         return <Dashboard />
     }
@@ -45,6 +52,7 @@ function AppContent() {
         onTabChange={setActiveTab}
         onChatToggle={() => setIsChatOpen(!isChatOpen)}
         isChatOpen={isChatOpen}
+        unreadMessagesCount={unreadCount}
       />
 
       {/* Main Content Area */}

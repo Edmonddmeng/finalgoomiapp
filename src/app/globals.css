@@ -108,6 +108,107 @@ body {
 }
 
 
+/* Add this to your global CSS file (globals.css or styles.css) */
+
+/* Stream Chat Modal Styles */
+.str-chat.chat-modal {
+  height: 100% !important;
+  background: transparent !important;
+}
+
+.str-chat.chat-modal .str-chat__container {
+  height: 100% !important;
+  background: transparent !important;
+}
+
+.str-chat.chat-modal .str-chat__channel {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.str-chat.chat-modal .str-chat__main-panel {
+  height: 100% !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.str-chat.chat-modal .str-chat__channel-header {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background-color: #ffffff !important;
+  flex-shrink: 0 !important;
+}
+
+.str-chat.chat-modal .str-chat__list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  background-color: #f9fafb !important;
+}
+
+.str-chat.chat-modal .str-chat__input {
+  padding: 12px 16px !important;
+  border-top: 1px solid #e5e7eb !important;
+  background-color: #ffffff !important;
+  flex-shrink: 0 !important;
+}
+
+.str-chat.chat-modal .str-chat__input-flat {
+  border-radius: 8px !important;
+}
+
+/* Dark mode support */
+.dark .str-chat.chat-modal .str-chat__channel-header {
+  border-bottom: 1px solid #374151 !important;
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.dark .str-chat.chat-modal .str-chat__list {
+  background-color: #111827 !important;
+}
+
+.dark .str-chat.chat-modal .str-chat__input {
+  border-top: 1px solid #374151 !important;
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.dark .str-chat.chat-modal .str-chat__input-flat {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #ffffff !important;
+}
+
+.dark .str-chat.chat-modal .str-chat__input-flat:focus {
+  border-color: #3b82f6 !important;
+}
+
+/* Message styling */
+.str-chat.chat-modal .str-chat__message-simple {
+  margin-bottom: 8px !important;
+}
+
+.str-chat.chat-modal .str-chat__message-simple__content {
+  max-width: 70% !important;
+}
+
+.str-chat.chat-modal .str-chat__message-text {
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+}
+
+/* Hide unnecessary elements in modal */
+.str-chat.chat-modal .str-chat__thread {
+  display: none !important;
+}
+
+/* Ensure proper z-index */
+.str-chat.chat-modal {
+  z-index: auto !important;
+}
+
 
 
 
