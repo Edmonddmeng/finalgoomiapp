@@ -2,13 +2,13 @@
 import { useState } from "react"
 import Image from "next/image"
 import type { User, Community, CommunityCategory } from "@/types"
-import { Award, Settings, Users, Plus, X, Trash2, Loader2, Trophy, Clock, Upload } from "lucide-react"
+import { Award, Settings, Users, Plus, X, Trash2, Loader2, Trophy, Clock, Upload, CheckCircle, AlertCircle } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
 import { userService } from "@/services/userService"
-// import { Upload } from "lucide-react"
+import { calculateProfileProgress, ProfileProgressBadge, ProfileCompletionSuggestions } from "@/components/Utils/profileProgress"
 
 export function Profile() {
   const { user: authUser } = useAuth()
@@ -43,6 +43,9 @@ export function Profile() {
   
   const user = userProfile || authUser
   
+  // Calculate profile progress
+  const profileProgress = calculateProfileProgress(user)
+  
   // State for achievement tabs
   const [activeAchievementTab, setActiveAchievementTab] = useState<'completed' | 'inProgress'>('completed')
   
@@ -50,6 +53,7 @@ export function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showEditProfile, setShowEditProfile] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [showProfileTips, setShowProfileTips] = useState(false)
   const [newCommunity, setNewCommunity] = useState<{
     name: string
     description: string
@@ -228,20 +232,33 @@ export function Profile() {
       setUploadingAvatar(false)
     }
   }
-  
 
   return (
     <div className="space-y-8">
       {/* Profile Title Card */}
       <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-3xl p-8 text-white shadow-xl">
         <div className="flex flex-col md:flex-row items-center gap-6">
-          <Image
-            src={user.avatar || "/placeholder.svg"}
-            alt={user.name}
-            width={128}
-            height={128}
-            className="rounded-full border-4 border-white/30 shadow-xl"
-          />
+          <div className="relative">
+            <Image
+              src={user.avatar || "/placeholder.svg"}
+              alt={user.name}
+              width={128}
+              height={128}
+              className="rounded-full border-4 border-white/30 shadow-xl"
+            />
+            {/* Profile completion indicator */}
+            <div className="absolute -top-2 -right-2">
+              {profileProgress.percentage === 100 ? (
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                  <CheckCircle size={16} className="text-white" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white">
+                  <AlertCircle size={16} className="text-white" />
+                </div>
+              )}
+            </div>
+          </div>
           <div className="text-center md:text-left flex-1">
             <h1 className="text-4xl font-bold mb-2">{user.name}</h1>
             <p className="text-white/90 text-lg">{user.email}</p>
@@ -250,8 +267,12 @@ export function Profile() {
             </p>
             <div className="mt-4 flex flex-wrap gap-4">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
-                <span className="font-bold">{user.progressLevel}%</span>
-                <span className="text-sm ml-1 text-white/90">Progress</span>
+                <ProfileProgressBadge
+                  percentage={profileProgress.percentage}
+                  completedFields={profileProgress.completedFields}
+                  totalFields={profileProgress.totalFields}
+                  showDetails={true}
+                />
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-white/30">
                 <span className="font-bold">{user.stats?.totalCompetitions}</span>
@@ -263,15 +284,31 @@ export function Profile() {
               </div>
             </div>
           </div>
-          <button 
-            onClick={handleOpenEditProfile}
-            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-white/30 transition-colors"
-          >
-            <Settings size={16} />
-            <span>Edit Profile</span>
-          </button>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={handleOpenEditProfile}
+              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-white/30 transition-colors"
+            >
+              <Settings size={16} />
+              <span>Edit Profile</span>
+            </button>
+            {profileProgress.percentage < 100 && (
+              <button
+                onClick={() => setShowProfileTips(!showProfileTips)}
+                className="bg-yellow-500/20 backdrop-blur-sm hover:bg-yellow-500/30 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 border border-yellow-300/30 transition-colors text-sm"
+              >
+                <AlertCircle size={14} />
+                <span>Complete Profile</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Profile Completion Tips */}
+      {showProfileTips && profileProgress.percentage < 100 && (
+        <ProfileCompletionSuggestions missingFields={profileProgress.missingFields} />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Updated Achievements Card with Tabs */}
