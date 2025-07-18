@@ -27,10 +27,6 @@ class AuthService {
 
     setAuthToken(tokens.accessToken)
     
-    // Set default authorization header
-    // if (apiClient.defaults) {
-    //   apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`
-    // }
   }
 
   clearTokens() {
@@ -95,6 +91,7 @@ return loginResponse
   async logout(): Promise<void> {
     try {
       await apiClient.post('/auth/logout')
+      this.clearTokens()
     } finally {
       this.clearTokens()
     }

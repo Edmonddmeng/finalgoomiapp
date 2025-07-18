@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 
 // Define API response format
@@ -25,6 +26,14 @@ export class ApiError extends Error {
   }
 }
 
+// Global auth error handler - will be set by AuthContext
+let globalAuthErrorHandler: (() => void) | null = null
+
+// Function to set the global auth error handler
+export const setGlobalAuthErrorHandler = (handler: () => void) => {
+  globalAuthErrorHandler = handler
+}
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://goomi-community-backend.onrender.com/api',
@@ -37,6 +46,12 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Add auth token automatically
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
     // Add timestamp to prevent caching
     if (config.method === 'get') {
       config.params = {
@@ -117,38 +132,29 @@ apiClient.interceptors.response.use(
     // Handle API errors
     const { status, data } = error.response
 
-    // Handle specific status codes
-    switch (status) {
-      case 401:
-        // Unauthorized - token might be expired
-        if (data?.error?.code === 'AUTH_TOKEN_EXPIRED') {
-          // Attempt to refresh token
-          try {
-            const authService = await import('@/services/authService').then(m => m.authService)
-            const refreshToken = authService?.getRefreshToken()
-            
-            if (refreshToken && authService) {
-              await (authService as any).refreshToken(refreshToken)
-              
-              // Retry original request
-              const originalRequest = error.config!
-              return apiClient(originalRequest)
-            }
-          } catch (refreshError) {
-            // Refresh failed, redirect to login
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login'
-            }
-          }
+    // Handle 401 and 403 errors globally
+    if (status === 401 || status === 403) {
+      console.log(`Authentication error detected: ${status}`)
+      
+      // Call global auth error handler if available
+      if (globalAuthErrorHandler) {
+        globalAuthErrorHandler()
+      } else {
+        // Fallback: redirect to login directly
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
         }
-        break
+      }
+      
+      // Still throw the error for the component to handle if needed
+      throw new ApiError(
+        status === 401 ? 'Authentication required. Please log in.' : 'Access denied.',
+        status === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN'
+      )
+    }
 
-      case 403:
-        throw new ApiError(
-          data?.error?.message || 'You do not have permission to perform this action.',
-          data?.error?.code || 'FORBIDDEN'
-        )
-
+    // Handle other specific status codes
+    switch (status) {
       case 404:
         throw new ApiError(
           data?.error?.message || 'Resource not found.',
@@ -178,17 +184,16 @@ apiClient.interceptors.response.use(
         )
     }
 
-const fallbackMessage =
-  typeof data?.error === 'string'
-    ? data.error
-    : data?.error?.message || data?.message || 'An unexpected error occurred.'
+    const fallbackMessage =
+      typeof data?.error === 'string'
+        ? data.error
+        : data?.error?.message || data?.message || 'An unexpected error occurred.'
 
-throw new ApiError(
-  fallbackMessage,
-  data?.error?.code || 'UNKNOWN_ERROR',
-  data?.error?.details
-)
-
+    throw new ApiError(
+      fallbackMessage,
+      data?.error?.code || 'UNKNOWN_ERROR',
+      data?.error?.details
+    )
   }
 )
 

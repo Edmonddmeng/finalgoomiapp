@@ -78,7 +78,7 @@ export function Dashboard() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-500 dark:text-gray-400">Please log in to view your dashboard</p>
+        {typeof window !== "undefined" && (window.location.href = "/login")}
       </div>
     )
   }
@@ -191,7 +191,7 @@ export function Dashboard() {
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
           <h1 className="text-3xl font-bold mb-4">
-            Welcome back, {user.name.split(' ')[0]}!
+            Welcome back, {user.username.split(' ')[0]}!
           </h1>
           
           {/* Inspiring Quote */}

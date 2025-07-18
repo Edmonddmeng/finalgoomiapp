@@ -18,8 +18,6 @@ export default function LoginPage() {
   const [showResetModal, setShowResetModal] = useState(false)
   const router = useRouter()
   const { login } = useAuth()
-
-  // 
   
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault()

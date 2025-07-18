@@ -27,6 +27,7 @@ import { useApiQuery, useApiMutation } from "@/hooks/useApiQuery"
 import { useToggleTask } from "@/hooks/useTasks"
 import { useCompleteCompetition, useUncompleteCompetition } from "@/hooks/useCompetitions"
 import { format, isAfter, startOfDay } from "date-fns"
+import { useConfirm } from "@/components/Utils/ConfirmDialog"
 
 interface CompetitionDetailsProps {
   competition: Competition
@@ -46,7 +47,8 @@ export function CompetitionDetails({
   onTaskUpdate, 
   onCompetitionUpdate 
 }: CompetitionDetailsProps) {
-  
+  const { confirm } = useConfirm()
+
   // Add early return if competition is not loaded yet
   if (!competition || !competition.id || !competition.name) {
     return (
@@ -138,8 +140,15 @@ export function CompetitionDetails({
     }
   }
 
-  const handleDeleteInsight = (insightId: string) => {
-    if (window.confirm('Are you sure you want to delete this insight?')) {
+  const handleDeleteInsight = async (insightId: string) => {
+    const confirmed = await confirm({
+      title: "Delete Insight",
+      message: `Are you sure you want to delete this insight?`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    })
+    if (confirmed) {
       setDeletingInsightId(insightId)
       deleteInsight(insightId)
     }

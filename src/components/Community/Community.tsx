@@ -10,9 +10,11 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
+import { useConfirm } from "@/components/Utils/ConfirmDialog"
 
 export function Community() {
   const { user } = useAuth()
+  const { confirm } = useConfirm()
   
   // Fetch data from API
   const { data: communitiesData, isLoading: communitiesLoading, refetch: refetchCommunities } = useApiQuery(
@@ -109,10 +111,19 @@ export function Community() {
   }
 
   const handleLeaveCommunity = async (communityId: string) => {
-    if (window.confirm("Are you sure you want to leave this community?")) {
-      await leaveCommunityMutation.mutateAsync(communityId)
-      refetchCommunities()
-    }
+        // Use the custom confirmation dialog
+        const confirmed = await confirm({
+          title: "Leave Community",
+          message: `Are you sure you want to leave this community?`,
+          confirmText: "Delete",
+          cancelText: "Cancel",
+          type: "danger"
+        })
+
+        if (confirmed) {
+          await leaveCommunityMutation.mutateAsync(communityId)
+          refetchCommunities()
+        }
   }
   
   const handleVotePost = async (postId: string, voteType: "up" | "down") => {

@@ -1,10 +1,12 @@
+
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { authService as authServiceInstance } from '@/services/authService'
 const authService = authServiceInstance
 import { User, AuthTokens } from '@/types'
-import { apiClient } from '@/lib/apiClient'
+import { apiClient, setAuthToken, setGlobalAuthErrorHandler } from '@/lib/apiClient'
 
 interface AuthContextType {
   user: User | null
@@ -17,7 +19,6 @@ interface AuthContextType {
   refreshAuth: () => Promise<void>
 }
 
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const TOKEN_KEY = 'goomi_auth_tokens'
@@ -27,72 +28,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const router = useRouter()
 
-    useEffect(() => {
-    const storedUser = localStorage.getItem('goomi_user')
-    const token = localStorage.getItem('accessToken')
-
-    if (storedUser && token) {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setUser(JSON.parse(storedUser))
-      setIsAuthenticated(true)
+  // Global auth error handler for 401/403 errors
+  const handleAuthError = useCallback(() => {
+    console.log('Handling authentication error - clearing auth state')
+    
+    // Clear all auth data
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('token')
+    
+    // Clear auth token from API client
+    setAuthToken(null)
+    
+    // Clear auth service tokens
+    if (authService && (authService as any).clearTokens) {
+      (authService as any).clearTokens()
     }
-  }, [])
+    
+    // Update state
+    setUser(null)
+    setIsAuthenticated(false)
+    
+    // Redirect to login
+    router.push('/login')
+  }, [router])
+
+  // Set up global auth error handler on mount
+  useEffect(() => {
+    setGlobalAuthErrorHandler(handleAuthError)
+    
+    // Cleanup on unmount
+    return () => {
+      setGlobalAuthErrorHandler(() => {})
+    }
+  }, [handleAuthError])
 
   // Load user and tokens from localStorage on mount
   useEffect(() => {
     const loadStoredAuth = async () => {
       try {
-        const storedTokens = localStorage.getItem(TOKEN_KEY)
         const storedUser = localStorage.getItem(USER_KEY)
+        const storedToken = localStorage.getItem('accessToken') || localStorage.getItem('token')
 
-        if (storedTokens && storedUser) {
-          const tokens: AuthTokens = JSON.parse(storedTokens)
+        if (storedUser && storedToken) {
+          // Set token in API client
+          setAuthToken(storedToken)
+          
+          // Parse and set user
           const userData: User = JSON.parse(storedUser)
-          
-          // Set tokens in auth service
-          (authService as any).setTokens(tokens)
-          
-          // Verify token is still valid by fetching user profile
-          const freshUserData = await (authService as any).getCurrentUser()
-          setUser(freshUserData)
+          setUser(userData)
           setIsAuthenticated(true)
+          
+          // Optionally verify token is still valid
+          // This will automatically trigger auth error handler if token is invalid
+          try {
+            await authService.getCurrentUser()
+          } catch (error) {
+            // Token is invalid, auth error handler will be called by API client
+            console.log('Token validation failed')
+          }
         }
       } catch (error) {
-        // Token invalid or expired, clear storage
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-        (authService as any).clearTokens();
+        console.error('Error loading stored auth:', error)
+        handleAuthError()
       } finally {
         setIsLoading(false)
       }
     }
 
     loadStoredAuth()
+  }, [handleAuthError])
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const response = await authService.login(email, password)
+      const { user, tokens } = response
+      
+      // Set token in API client
+      setAuthToken(tokens.accessToken)
+      
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', tokens.accessToken)
+      localStorage.setItem('token', tokens.accessToken)
+      localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
+
+      // Fetch fresh user data
+      const freshUser = await authService.getCurrentUser()
+      setUser(freshUser)
+      setIsAuthenticated(true)
+      localStorage.setItem(USER_KEY, JSON.stringify(freshUser))
+      
+    } catch (err) {
+      console.error('Login failed:', err)
+      throw err
+    }
   }, [])
-  
-
-const login = useCallback(async (email: string, password: string) => {
-  try {
-    const response = await authService.login(email, password)
-    const { user, tokens } = response
-    // Set token manually into headers
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`
-    localStorage.setItem('accessToken', tokens.accessToken)
-    localStorage.setItem("token", tokens.accessToken);
-
-    // Fetch and set user
-    const freshUser = await authService.getCurrentUser()
-    setUser(freshUser)
-    setIsAuthenticated(true)
-    localStorage.setItem(USER_KEY, JSON.stringify(freshUser))
-  } catch (err) {
-    console.error('Login failed:', err)
-    throw err
-  }
-}, [])
-
-
 
   const register = useCallback(async (
     email: string, 
@@ -101,36 +134,58 @@ const login = useCallback(async (email: string, password: string) => {
     username: string
   ) => {
     try {
-      const response = await (authService as any).register({ email, password, name, username })
-      const { user, tokens } = response
+      // Make direct API call to signup endpoint
+      const response = await fetch("https://goomi-community-backend.onrender.com/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password, name, username })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Registration failed")
+      }
+
+      // If signup was successful, automatically log the user in
+      await login(email, password)
       
-      // Store tokens and user
-      localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
-      localStorage.setItem(USER_KEY, JSON.stringify(user))
-      
-      // Update state
-      setUser(user)
-      setIsAuthenticated(true)
     } catch (error) {
+      console.error('Registration failed:', error)
       throw error
     }
-  }, [])
+  }, [login])
 
   const logout = useCallback(async () => {
     try {
-      await (authService as any).logout()
-    } catch (error) {
-      // Even if logout fails on server, clear local state
-      console.error('Logout error:', error)
-    } finally {
-      // Clear local storage and state
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(USER_KEY)
-      authService.clearTokens()
+      localStorage.removeItem('goomi_auth_tokens')
+      localStorage.removeItem('goomi_user')
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('token')
+
+      // Clear API client auth header
+      setAuthToken(null)
+
+      // Clear auth service tokens if they exist
+      if (authService && (authService as any).clearTokens) {
+        (authService as any).clearTokens()
+      }
+
+      // Update state
       setUser(null)
       setIsAuthenticated(false)
+
+      // Redirect to login
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      // Clear all auth data
+      handleAuthError()
     }
-  }, [])
+  }, [handleAuthError])
 
   const updateUser = useCallback((updatedUser: User) => {
     setUser(updatedUser)
@@ -139,31 +194,35 @@ const login = useCallback(async (email: string, password: string) => {
 
   const refreshAuth = useCallback(async () => {
     try {
-      const storedTokens = localStorage.getItem(TOKEN_KEY);
-      if (!storedTokens) throw new Error('No tokens found');
+      const storedTokens = localStorage.getItem(TOKEN_KEY)
+      if (!storedTokens) throw new Error('No tokens found')
       
-      const tokens: AuthTokens = JSON.parse(storedTokens);
-      
-      if (!authService) {
-        throw new Error('Auth service not initialized');
-      }
-      
-      const newTokens = await (authService as any).refreshToken(tokens.refreshToken);
+      const tokens: AuthTokens = JSON.parse(storedTokens)
+      const newTokens = await authService.refreshToken(tokens.refreshToken)
       
       // Update stored tokens
-      localStorage.setItem(TOKEN_KEY, JSON.stringify(newTokens));
-      (authService as any).setTokens(newTokens);
+      localStorage.setItem(TOKEN_KEY, JSON.stringify(newTokens))
+      localStorage.setItem('accessToken', newTokens.accessToken)
+      
+      // Update API client with new token
+      setAuthToken(newTokens.accessToken)
+      
+      // Update auth service tokens
+      if (authService && (authService as any).setTokens) {
+        (authService as any).setTokens(newTokens)
+      }
       
       // Refresh user data
-      const freshUserData = await (authService as any).getCurrentUser();
-      setUser(freshUserData);
-      setIsAuthenticated(true);
+      const freshUserData = await authService.getCurrentUser()
+      setUser(freshUserData)
+      setIsAuthenticated(true)
+      
     } catch (error) {
-      // Refresh failed, logout user
-      await logout()
+      console.error('Token refresh failed:', error)
+      handleAuthError()
       throw error
     }
-  }, [logout])
+  }, [handleAuthError])
 
   const value = {
     user,
@@ -191,12 +250,19 @@ export function useAuth() {
   return context
 }
 
-// HOC for protecting routes
+// Updated HOC for protecting routes
 export function withAuth<P extends object>(
   Component: React.ComponentType<P>
 ): React.ComponentType<P> {
   return function AuthenticatedComponent(props: P) {
     const { isAuthenticated, isLoading } = useAuth()
+    const router = useRouter()
+
+    useEffect(() => {
+      if (!isLoading && !isAuthenticated) {
+        router.push('/login')
+      }
+    }, [isAuthenticated, isLoading, router])
 
     if (isLoading) {
       return (
@@ -207,12 +273,7 @@ export function withAuth<P extends object>(
     }
 
     if (!isAuthenticated) {
-      // In a real app, redirect to login
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <p className="text-gray-600">Please log in to continue</p>
-        </div>
-      )
+      return null // Will redirect via useEffect
     }
 
     return <Component {...props} />

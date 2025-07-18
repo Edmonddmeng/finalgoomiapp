@@ -7,6 +7,7 @@ import { Plus, Check, Trash2, X, Calendar, Tag, Loader2, Search, Trophy, Users, 
 import { useCreateTask, useToggleTask, useDeleteTask } from "@/hooks/useTasks"
 import { useCompetitions } from "@/hooks/useCompetitions"
 import { useActivities } from "@/hooks/useActivities"
+import { useConfirm } from "@/components/Utils/ConfirmDialog"
 import { format } from "date-fns"
 
 interface TaskListProps {
@@ -38,6 +39,9 @@ export function TaskList({
   const [showCompleted, setShowCompleted] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Confirmation dialog hook
+  const { confirm } = useConfirm()
   
   // Load competitions and activities using hooks
   const { data: competitions = [], isLoading: competitionsLoading, error: competitionsError } = useCompetitions()
@@ -153,7 +157,19 @@ export function TaskList({
   }
   
   const handleDeleteTask = async (taskId: string) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
+    const task = tasks.find(t => t.id === taskId)
+    const taskTitle = task?.title || "this task"
+    
+    // Use the custom confirmation dialog
+    const confirmed = await confirm({
+      title: "Delete Task",
+      message: `Are you sure you want to delete "${taskTitle}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    })
+    
+    if (confirmed) {
       try {
         console.log('🔄 TaskList: Deleting task:', taskId)
         await deleteTask(taskId)

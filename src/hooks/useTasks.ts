@@ -65,12 +65,6 @@ export function useDeleteTask() {
   )
 }
 
-// export function useToggleTask() {
-//   return useApiMutation(
-//     (id: string) => taskService.toggleTask(id)
-//   )
-// }
-
 export function useToggleTask() {
   const queryClient = useQueryClient()
   

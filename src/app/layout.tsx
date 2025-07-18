@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { QueryClientProvider } from "@/components/Provider/QueryClientProvider"
+import { ToastProvider } from "@/components/Utils/Toast"
+import { ConfirmProvider } from "@/components/Utils/ConfirmDialog"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,7 +22,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
         <QueryClientProvider>
-          {children}
+          <ToastProvider>
+            <ConfirmProvider>
+              {children}
+            </ConfirmProvider>
+          </ToastProvider>
         </QueryClientProvider>
       </body>
     </html>

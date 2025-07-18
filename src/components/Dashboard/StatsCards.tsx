@@ -7,7 +7,7 @@ import axios from "axios"
 import { useOverallGPA } from "@/hooks/useAcademics"
 import { userService } from "@/services/userService"
 import { useApiQuery } from "@/hooks/useApiQuery"
-// Removed invalid import of getDashboardStats
+import { useToast } from "@/components/Utils/Toast"
 
 interface StatsCardsProps {
   user: User
@@ -24,6 +24,8 @@ export function StatsCards({
   onCompetitionSelect,
   onActivitySelect 
 }: StatsCardsProps) {
+  
+  const { success, error, warning } = useToast()
   
   // Fetch overall GPA data from API
   const { data: overallGPAData, isLoading: overallGPALoading, refetch: refetchOverallGPA } = useOverallGPA()
@@ -61,12 +63,12 @@ export function StatsCards({
 
       // Validate scores
       if (parsedSatScore !== null && (parsedSatScore < 400 || parsedSatScore > 1600)) {
-        alert("SAT score must be between 400 and 1600")
+        warning("Invalid SAT Score", "SAT score must be between 400 and 1600")
         return
       }
 
       if (parsedActScore !== null && (parsedActScore < 1 || parsedActScore > 36)) {
-        alert("ACT score must be between 1 and 36")
+        warning("Invalid ACT Score", "ACT score must be between 1 and 36")
         return
       }
 
@@ -79,15 +81,15 @@ export function StatsCards({
         }
       })
 
-      console.log("Scores updated successfully")
+      success("Scores Updated", "Your test scores have been successfully updated!")
       setIsEditingScores(false)
       
       // Refetch the overall GPA data to get updated scores
       await refetchOverallGPA()
       
-    } catch (error) {
-      console.error("Failed to update scores:", error)
-      alert("Failed to update scores. Please try again.")
+    } catch (err) {
+      console.error("Failed to update scores:", err)
+      error("Update Failed", "Failed to update test scores. Please try again.")
     } finally {
       setLoading(false)
     }
