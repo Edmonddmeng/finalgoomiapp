@@ -19,6 +19,7 @@ const navItems = [
   { id: "evaluations", label: "Evaluations", icon: ClipboardCheck },
   { id: "community", label: "Community", icon: Users },
   { id: "profile", label: "Profile", icon: User },
+  { id: "chat", label: "Chat", icon: MessageSquare },
 ]
 
 export function TabNavigation({ activeTab, onTabChange, onChatToggle, isChatOpen }: TabNavigationProps) {

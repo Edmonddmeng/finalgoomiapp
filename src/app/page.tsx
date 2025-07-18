@@ -10,6 +10,7 @@ import { Profile } from "@/components/Profile/Profile"
 import { Settings } from "@/components/Settings/Settings"
 import { Evaluations } from "@/components/Evaluations/Evaluations"
 import { AIChat } from "@/components/AIChat/AIChat"
+import { ChatOverview } from "@/components/Chat/chat-overview"
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
@@ -29,6 +30,8 @@ function AppContent() {
         return <Evaluations />
       case "settings":
         return <Settings />
+      case "chat":
+        return <ChatOverview />
       default:
         return <Dashboard />
     }

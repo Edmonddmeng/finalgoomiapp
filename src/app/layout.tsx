@@ -5,6 +5,7 @@ import "./globals.css"
 import { QueryClientProvider } from "@/components/Provider/QueryClientProvider"
 import { ToastProvider } from "@/components/Utils/Toast"
 import { ConfirmProvider } from "@/components/Utils/ConfirmDialog"
+import { AuthProvider } from '@/contexts/AuthContext'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -24,7 +25,9 @@ export default function RootLayout({
         <QueryClientProvider>
           <ToastProvider>
             <ConfirmProvider>
-              {children}
+              <AuthProvider>
+                {children}
+              </AuthProvider>
             </ConfirmProvider>
           </ToastProvider>
         </QueryClientProvider>
