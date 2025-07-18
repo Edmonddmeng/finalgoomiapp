@@ -2,7 +2,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import type { User, Community, CommunityCategory } from "@/types"
-import { Award, Settings, Users, Plus, X, Trash2, Loader2, Trophy, Clock, Upload, CheckCircle, AlertCircle } from "lucide-react"
+import { Award, Settings, Users, Plus, X, Trash2, Loader2, Trophy, Clock, Upload, CheckCircle, AlertCircle, User as UserIcon } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useApiMutation } from "@/hooks/useApiMutation"
@@ -447,32 +447,75 @@ export function Profile() {
           </div>
         </div>
 
-        {/* Friends Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Friends</h3>
-          <div className="space-y-3">
-            {/* Mock friends data */}
-            {[
-              { name: "Alice Johnson", avatar: "/IMG_2464.png" },
-              { name: "Bob Williams", avatar: "/IMG_2464.png" },
-              { name: "Charlie Brown", avatar: "/IMG_2464.png" },
-            ].map((friend) => (
-              <div key={friend.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={friend.avatar || "/placeholder.svg"}
-                    alt={friend.name}
-                    width={40}
-                    height={40}
-                    className="rounded-full"
-                  />
-                  <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{friend.name}</p>
-                </div>
-                <button className="text-xs text-blue-600 hover:underline">View Profile</button>
-              </div>
-            ))}
+        {/* Bio Card */}
+{/* Enhanced Bio Card */}
+<div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+  {/* Header with gradient accent */}
+  <div className="relative">
+    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 dark:from-purple-500/10 dark:to-pink-500/10"></div>
+    <div className="relative flex items-center justify-between p-6 pb-4">
+      <div className="flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">About</h3>
+        <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+      </div>
+      <button 
+        onClick={handleOpenEditProfile}
+        className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors"
+      >
+        <Settings size={14} />
+        Edit
+      </button>
+    </div>
+  </div>
+
+  {user.bio && user.bio.trim() ? (
+    <>
+      {/* Quote decoration */}
+      <div className="px-6 pb-2">
+        <Award size={18} className="text-purple-300 dark:text-purple-600" />
+      </div>
+
+      {/* Bio content with enhanced styling */}
+      <div className="px-6 pb-6">
+        <div className="space-y-4">
+          {/* Main bio text */}
+          <div className="relative">
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base whitespace-pre-wrap font-light">
+                {user.bio}
+              </p>
+            </div>
           </div>
         </div>
+      </div>
+    </>
+  ) : (
+    /* Enhanced empty state */
+    <div className="px-6 pb-6">
+      <div className="text-center py-12">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-full blur-2xl opacity-60"></div>
+          <div className="relative bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full p-4 w-20 h-20 mx-auto flex items-center justify-center">
+            <UserIcon size={32} className="text-purple-500 dark:text-purple-400" />
+          </div>
+        </div>
+        <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          Share Your Story
+        </h4>
+        <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-xs mx-auto leading-relaxed">
+          Let others know about your academic journey, interests, and what drives your passion for learning.
+        </p>
+        <button 
+          onClick={handleOpenEditProfile}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          <Settings size={16} />
+          Add Your Bio
+        </button>
+      </div>
+    </div>
+  )}
+</div>
       </div>
 
       {/* Community Management Section */}

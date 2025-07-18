@@ -25,9 +25,11 @@ interface ProfileModalProps {
   isOpen: boolean
   onClose: () => void
   userId: string | null
+  onProfileUnsaved?: (profileId: string) => void // Callback when profile is unsaved
+  onProfileSaved?: (profileData: any) => void // Callback when profile is saved
 }
 
-export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalProps) {
+export default function ProfileModal({ isOpen, onClose, userId, onProfileUnsaved, onProfileSaved }: ProfileModalProps) {
   const { user } = useAuth()
   const router = useRouter()
   
@@ -58,7 +60,17 @@ export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalPr
     if (!user || !userId) return
     
     try {
+      const wasSaved = isSaved(userId)
       await toggleSave(userId)
+      
+      // Call appropriate callback based on the action
+      if (wasSaved && onProfileUnsaved) {
+        // Profile was unsaved
+        onProfileUnsaved(userId)
+      } else if (!wasSaved && onProfileSaved && userData) {
+        // Profile was saved
+        onProfileSaved(userData)
+      }
     } catch (error) {
       console.error("❌ Failed to toggle save:", error)
     }
@@ -214,7 +226,7 @@ export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalPr
                         <Heart className={`h-4 w-4 ${isSaved(userId!) ? 'fill-current' : ''}`} />
                       )}
                       {saving 
-                        ? (isSaved(userId!) ? 'Removing...' : 'Saving...') 
+                        ? (isSaved(userId!) ? 'Saving...' : 'Removing...') 
                         : (isSaved(userId!) ? 'Unsave' : 'Save')
                       }
                     </button>

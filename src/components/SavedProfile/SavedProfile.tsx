@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -46,6 +47,32 @@ export default function SavedProfiles() {
     const handleCloseProfile = () => {
       setProfileModalOpen(false)
       setSelectedUserId(null)
+    }
+
+    // Add callbacks for when profile is saved/unsaved in modal
+    const handleProfileUnsaved = (profileId: string) => {
+      // Remove from local state immediately for better UX
+      setSavedProfiles(prev => prev.filter(profile => profile.id !== profileId))
+    }
+
+    const handleProfileSaved = (profileData: any) => {
+      // Create saved profile object from the profile data
+      const savedProfile: SavedProfile = {
+        id: profileData.id,
+        username: profileData.username,
+        email: profileData.email,
+        profile_picture: profileData.avatar || profileData.profile_picture,
+        role: profileData.role,
+        created_at: profileData.created_at
+      }
+      
+      // Add to local state immediately for better UX
+      setSavedProfiles(prev => {
+        // Check if already exists to avoid duplicates
+        const exists = prev.some(profile => profile.id === profileData.id)
+        if (exists) return prev
+        return [...prev, savedProfile]
+      })
     }
 
   // Chat modal handlers
@@ -134,10 +161,6 @@ export default function SavedProfiles() {
     }
   }
 
-  // const handleViewProfile = (profileId: string) => {
-  //   router.push(`/profile/${profileId}`)
-  // }
-
   const handleMessageUser = (profileId: string) => {
     router.push(`/chat/${profileId}`)
   }
@@ -221,12 +244,6 @@ export default function SavedProfiles() {
                 <p className="text-gray-600 mb-6">
                   You haven't saved any profiles yet. Start exploring and save profiles you're interested in!
                 </p>
-                {/* <button
-                  onClick={() => router.push('/explore')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Explore Profiles
-                </button> */}
               </div>
             ) : (
               <>
@@ -326,6 +343,8 @@ export default function SavedProfiles() {
         isOpen={profileModalOpen}
         onClose={handleCloseProfile}
         userId={selectedUserId}
+        onProfileUnsaved={handleProfileUnsaved}
+        onProfileSaved={handleProfileSaved}
       />
       <ChatModal 
         isOpen={chatModalOpen}
