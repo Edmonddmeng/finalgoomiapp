@@ -292,122 +292,128 @@ export function Dashboard() {
           <div className="mb-6">
             <p className="text-lg italic opacity-90">"{todaysQuote}"</p>
           </div>
-          
-          {/* Enhanced Streak Display */}
-          <div className="space-y-4">
-            {/* Main Streak Stats */}
-            <div className="flex items-center gap-4">
-              {/* Current Streak */}
-              <div className="flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white/20">
-                <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-full">
-                  <span className="text-2xl">{streakMessage.emoji}</span>
-                </div>
-                <div className="text-left">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold">{currentStreak}</span>
-                    <span className="text-sm font-medium opacity-90">days</span>
-                  </div>
-                  <p className="text-xs opacity-75">Current Streak</p>
-                </div>
+                      
+{/* Enhanced Streak Display - Split Layout */}
+<div className="flex gap-6 items-start">
+  {/* Left Half - Main Streak Stats and Message */}
+  <div className="flex-1 space-y-4">
+    {/* Main Streak Stats */}
+    <div className="space-y-4">
+      {/* Current and Best Streak Row */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {/* Current Streak */}
+        <div className="flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white/20 flex-1 min-w-[200px]">
+          <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-full">
+            <span className="text-2xl">{streakMessage.emoji}</span>
+          </div>
+          <div className="text-left">
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold">{currentStreak}</span>
+              <span className="text-sm font-medium opacity-90">days</span>
+            </div>
+            <p className="text-xs opacity-75">Current Streak</p>
+          </div>
+        </div>
+
+        {/* Best Streak - Only show if there's a record */}
+        {streakData && streakData.streak_high > 0 && (
+          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white/10 flex-1 min-w-[200px]">
+            <div className="flex items-center justify-center w-12 h-12 bg-amber-400/20 rounded-full">
+              <span className="text-2xl">🏆</span>
+            </div>
+            <div className="text-left">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-amber-100">{streakData.streak_high}</span>
+                <span className="text-sm font-medium opacity-75">days</span>
               </div>
+              <p className="text-xs opacity-75">Personal Best</p>
+            </div>
+            {/* New Record Badge */}
+            {streakData.isNewRecord && (
+              <div className="ml-2 px-2 py-1 bg-amber-400/30 rounded-full animate-pulse">
+                <span className="text-xs font-semibold text-amber-100">NEW!</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-              {/* Best Streak - Only show if there's a record */}
-              {streakData && streakData.streak_high > 0 && (
-                <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white/10">
-                  <div className="flex items-center justify-center w-12 h-12 bg-amber-400/20 rounded-full">
-                    <span className="text-2xl">🏆</span>
-                  </div>
-                  <div className="text-left">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-amber-100">{streakData.streak_high}</span>
-                      <span className="text-sm font-medium opacity-75">days</span>
-                    </div>
-                    <p className="text-xs opacity-75">Personal Best</p>
-                  </div>
-                  {/* New Record Badge */}
-                  {streakData.isNewRecord && (
-                    <div className="ml-2 px-2 py-1 bg-amber-400/30 rounded-full">
-                      <span className="text-xs font-semibold text-amber-100">NEW!</span>
-                    </div>
-                  )}
-                </div>
-              )}
+      {/* Loading State */}
+      {isUpdatingStreak && (
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 w-fit">
+          <Loader2 className="animate-spin h-4 w-4" />
+          <span className="text-sm">Updating...</span>
+        </div>
+      )}
+    </div>
+    
+    {/* Streak Message */}
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10">
+      <p className="text-sm opacity-90 font-medium">
+        {streakMessage.message}
+      </p>
+    </div>
+  </div>
 
-              {/* Loading State */}
-              {isUpdatingStreak && (
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-                  <Loader2 className="animate-spin h-4 w-4" />
-                  <span className="text-sm">Updating...</span>
-                </div>
-              )}
+  {/* Right Half - Gamified Progress Quest */}
+  {currentStreak > 0 && (
+    <div className="flex-1 max-w-md">
+          {/* Next Milestone Card */}
+          <div className="bg-white/10 rounded-xl p-4 border border-white/10">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center animate-bounce">
+                <span className="text-lg">
+                  {currentStreak < 7 ? '🌱' : 
+                   currentStreak < 30 ? '🔥' : 
+                   currentStreak < 100 ? '⚡' : '🏆'}
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">
+                  {currentStreak < 7 ? 'Sprout to Flame' :
+                   currentStreak < 30 ? 'Flame to Lightning' :
+                   currentStreak < 100 ? 'Lightning to Legend' :
+                   'You\'re a Legend!'}
+                </p>
+                <p className="text-xs opacity-75">
+                  {currentStreak < 7 ? `${7 - currentStreak} days left` :
+                   currentStreak < 30 ? `${30 - currentStreak} days left` :
+                   currentStreak < 100 ? `${100 - currentStreak} days left` :
+                   'Quest Complete!'}
+                </p>
+              </div>
             </div>
             
-            {/* Streak Message */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10">
-              <p className="text-sm opacity-90 font-medium">
-                {streakMessage.message}
-              </p>
-            </div>
-            
-            {/* Progress & Milestones */}
-            {currentStreak > 0 && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium opacity-90">Progress to Next Milestone</span>
-                  <span className="text-xs opacity-75">
-                    {currentStreak < 7 ? `${7 - currentStreak} days to 1 week` :
-                     currentStreak < 30 ? `${30 - currentStreak} days to 1 month` :
-                     currentStreak < 100 ? `${100 - currentStreak} days to 100 days` :
-                     "Streak Master! 🏆"}
+            {/* Animated Progress Bar */}
+            {currentStreak < 100 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs opacity-75">
+                  <span>{currentStreak}</span>
+                  <span>
+                    {currentStreak < 7 ? '7' :
+                     currentStreak < 30 ? '30' :
+                     '100'} days
                   </span>
                 </div>
-                
-                {/* Progress Bar */}
-                {currentStreak < 100 && (
-                  <div className="w-full bg-white/20 rounded-full h-2">
-                    <div 
-                      className="bg-white/60 h-2 rounded-full transition-all duration-500 ease-out"
-                      style={{ 
-                        width: `${currentStreak < 7 ? (currentStreak / 7) * 100 :
-                                 currentStreak < 30 ? (currentStreak / 30) * 100 :
-                                 (currentStreak / 100) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                )}
-
-                {/* Achievement Badges */}
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="text-xs opacity-75">Achievements:</span>
-                  <div className="flex gap-1">
-                    {/* Week Badge */}
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                      currentStreak >= 7 ? 'bg-green-400/30 text-green-100' : 'bg-white/20 text-white/50'
-                    }`}>
-                      <span>🗓️</span>
-                      <span>Week</span>
-                    </div>
-                    
-                    {/* Month Badge */}
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                      currentStreak >= 30 ? 'bg-blue-400/30 text-blue-100' : 'bg-white/20 text-white/50'
-                    }`}>
-                      <span>📅</span>
-                      <span>Month</span>
-                    </div>
-                    
-                    {/* Century Badge */}
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                      currentStreak >= 100 ? 'bg-purple-400/30 text-purple-100' : 'bg-white/20 text-white/50'
-                    }`}>
-                      <span>💯</span>
-                      <span>Century</span>
-                    </div>
+                <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-2 rounded-full bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 transition-all duration-1000 ease-out relative"
+                    style={{ 
+                      width: `${currentStreak < 7 ? (currentStreak / 7) * 100 :
+                               currentStreak < 30 ? (currentStreak / 30) * 100 :
+                               (currentStreak / 100) * 100}%` 
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
                   </div>
                 </div>
               </div>
             )}
           </div>
+        {/* </div> */}
+      </div>
+  )}
+</div>
         </div>
       </div>
 
