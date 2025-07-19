@@ -144,6 +144,7 @@ return {
       token,
       newPassword
     })
+    console.log('Password reset successfully new password 3', newPassword)
   }
 
   async verifyEmail(token: string): Promise<void> {
