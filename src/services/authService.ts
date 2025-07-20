@@ -50,7 +50,6 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
-    // const response = await apiClient.post('https://goomi-community-backend.onrender.com/api/auth/login', {
     const response = await apiClient.post('/auth/login', {
       email,
       password

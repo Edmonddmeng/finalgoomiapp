@@ -135,18 +135,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     try {
       // Make direct API call to signup endpoint
-      const response = await fetch("https://goomi-community-backend.onrender.com/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password, name, username })
+      const response = await apiClient.post("/auth/signup", {
+        email,
+        password,
+        name,
+        username
       })
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Registration failed")
+      if (response.status !== 200) {
+        throw new Error(response.data.error || response.data.message || "Registration failed")
       }
 
       // If signup was successful, automatically log the user in

@@ -9,6 +9,7 @@ import { useApiMutation } from "@/hooks/useApiMutation"
 import { communityService } from "@/services/communityService"
 import { userService } from "@/services/userService"
 import { calculateProfileProgress, ProfileProgressBadge, ProfileCompletionSuggestions } from "@/components/Utils/profileProgress"
+import { apiClient } from "@/lib/apiClient"
 
 export function Profile() {
   const { user: authUser } = useAuth()
@@ -177,23 +178,18 @@ export function Profile() {
   
     try {
       // Get signed upload URL
-      const res = await fetch("https://goomi-community-backend.onrender.com/api/s3-upload-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ fileName, fileType }),
+      const res = await apiClient.post("/s3-upload-url", {
+        fileName,
+        fileType
       })
   
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error("❌ Failed to get upload URL:", errorText)
+      if (res.status !== 200) {
+        console.error("❌ Failed to get upload URL:", res.data.error || res.data.message)
         setUploadingAvatar(false)
         return
       }
   
-      const { uploadUrl, fileUrl } = await res.json()
+      const { uploadUrl, fileUrl } = res.data
   
       // Upload file to S3
       await fetch(uploadUrl, {
@@ -203,18 +199,13 @@ export function Profile() {
       })
   
       // Update profile picture URL in database
-      const updateRes = await fetch("https://goomi-community-backend.onrender.com/api/user/update-profile-picture-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ userId, profilePicture: fileUrl }),
+      const updateRes = await apiClient.post("/user/update-profile-picture-url", {
+        userId,
+        profilePicture: fileUrl
       })
   
-      if (!updateRes.ok) {
-        const errorText = await updateRes.text()
-        console.error("❌ Failed to update profile picture:", errorText)
+      if (updateRes.status !== 200) {
+        console.error("❌ Failed to update profile picture:", updateRes.data.error || updateRes.data.message)
         setUploadingAvatar(false)
         return
       }

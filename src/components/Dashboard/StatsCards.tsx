@@ -8,6 +8,7 @@ import { useOverallGPA } from "@/hooks/useAcademics"
 import { userService } from "@/services/userService"
 import { useApiQuery } from "@/hooks/useApiQuery"
 import { useToast } from "@/components/Utils/Toast"
+import { apiClient } from "@/lib/apiClient"
 
 interface StatsCardsProps {
   user: User
@@ -72,13 +73,9 @@ export function StatsCards({
         return
       }
 
-      await axios.post(`https://goomi-community-backend.onrender.com/api/users/test-scores`, {
+      await apiClient.post("/users/test-scores", {
         sat_score: parsedSatScore,
         act_score: parsedActScore
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-        }
       })
 
       success("Scores Updated", "Your test scores have been successfully updated!")

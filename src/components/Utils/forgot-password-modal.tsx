@@ -7,6 +7,7 @@ import { Button } from "@/components/Utils/button"
 import { Label } from "@/components/Utils/label"
 import { Alert, AlertDescription } from "@/components/Utils/alert"
 import { Loader2 } from "lucide-react"
+import { apiClient } from "@/lib/apiClient"
 
 interface ForgotPasswordModalProps {
   open: boolean
@@ -26,16 +27,12 @@ export default function ForgotPasswordModal({ open, onClose }: ForgotPasswordMod
     setError("")
 
     try {
-      const res = await fetch("https://goomi-community-backend.onrender.com/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+      const res = await apiClient.post("/auth/forgot-password", {
+        email
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to send reset email")
+      if (res.status !== 200) {
+        throw new Error(res.data.error || res.data.message || "Failed to send reset email")
       }
 
       setMessage("✅ Reset email sent! Check your inbox.")

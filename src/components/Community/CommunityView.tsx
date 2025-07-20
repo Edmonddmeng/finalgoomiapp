@@ -5,6 +5,7 @@ import type { Community as CommunityType, CommunityPost } from "@/types"
 import { ChevronLeft, Users, Plus, Send, X, Clock, TrendingUp, Upload, Loader2, Trash2 } from "lucide-react"
 import { PostCard } from "./PostCard"
 import Image from "next/image"
+import { apiClient } from "@/lib/apiClient"
 
 interface CommunityViewProps {
   community: CommunityType
@@ -132,23 +133,18 @@ export function CommunityView({
 
     try {
       // Get signed upload URL
-      const res = await fetch("https://goomi-community-backend.onrender.com/api/s3-upload-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ fileName, fileType }),
+      const res = await apiClient.post("/s3-upload-url", {
+        fileName,
+        fileType
       })
 
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error("❌ Failed to get upload URL:", errorText)
+      if (res.status !== 200) {
+        console.error("❌ Failed to get upload URL:", res.data.error || res.data.message)
         setUploadingPhoto(false)
         return
       }
 
-      const { uploadUrl, fileUrl } = await res.json()
+      const { uploadUrl, fileUrl } = res.data
 
       // Upload file to S3
       await fetch(uploadUrl, {
