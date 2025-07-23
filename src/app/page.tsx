@@ -9,14 +9,13 @@ import { Community } from "@/components/Community/Community"
 import { Profile } from "@/components/Profile/Profile"
 import { Settings } from "@/components/Settings/Settings"
 import { Evaluations } from "@/components/Evaluations/Evaluations"
-import { AIChat } from "@/components/AIChat/AIChat"
+import { AIChatPage } from "@/components/AIChat/AIChatPage"
 import { ChatOverview } from "@/components/Chat/chat-overview"
 import SavedProfile from "@/components/SavedProfile/SavedProfile"
 import { useGlobalUnreadMessages } from "@/hooks/useGlobalUnreadMessages"
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard")
-  const [isChatOpen, setIsChatOpen] = useState(false)
   const { unreadCount, isLoading, error } = useGlobalUnreadMessages()
 
 
@@ -39,6 +38,8 @@ function AppContent() {
         return <ChatOverview />
       case "saved-profiles":
         return <SavedProfile />
+      case "ai-chat":
+        return <AIChatPage />
       default:
         return <Dashboard />
     }
@@ -50,8 +51,8 @@ function AppContent() {
       <TabNavigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onChatToggle={() => setIsChatOpen(!isChatOpen)}
-        isChatOpen={isChatOpen}
+        onChatToggle={() => setActiveTab(activeTab === "ai-chat" ? "dashboard" : "ai-chat")}
+        isChatOpen={activeTab === "ai-chat"}
         unreadMessagesCount={unreadCount}
       />
 
@@ -60,8 +61,6 @@ function AppContent() {
         <div className="max-w-7xl mx-auto p-8">{renderActiveTab()}</div>
       </div>
 
-      {/* AI Chat */}
-      <AIChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   )
 }

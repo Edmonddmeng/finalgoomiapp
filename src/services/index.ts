@@ -7,5 +7,6 @@ export { activityService } from './activityService'
 export { taskService } from './taskService'
 export { communityService } from './communityService'
 export { evaluationService } from './evaluationService'
+export { aiChatService } from './aiChatService'
 
 // Re-export types if needed
