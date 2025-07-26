@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { User, Bot } from "lucide-react"
+import { User, Bot, CheckCircle2, Calendar, Trophy, Activity } from "lucide-react"
 import { SchoolCard } from "./SchoolCard"
 import { useTypewriter } from "@/hooks/useTypewriter"
 
@@ -20,6 +20,17 @@ interface ChatMessage {
     ranking?: number
     websiteUrl: string
   }>
+  actionTaken?: {
+    type: 'CREATE_TASK' | 'CREATE_COMPETITION' | 'CREATE_ACTIVITY'
+    itemId: string
+    details: {
+      title: string
+      dueDate?: string
+      description?: string
+      category?: string
+      [key: string]: any
+    }
+  }
   isGenerating?: boolean
 }
 
@@ -91,6 +102,31 @@ export function MessageBlock({ message, isLatest = false }: MessageBlockProps) {
                   {message.cards.map((school, index) => (
                     <SchoolCard key={school.id} school={school} index={index} />
                   ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Action taken indicator - show when an item was created */}
+            {!isUser && showCards && message.actionTaken && (
+              <div className="mt-4">
+                <div className="inline-flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-green-800 dark:text-green-200">
+                      {message.actionTaken.type === 'CREATE_TASK' && 'Task Created'}
+                      {message.actionTaken.type === 'CREATE_COMPETITION' && 'Competition Added'}
+                      {message.actionTaken.type === 'CREATE_ACTIVITY' && 'Activity Created'}
+                    </p>
+                    <p className="text-green-700 dark:text-green-300 flex items-center gap-2 mt-1">
+                      {message.actionTaken.type === 'CREATE_TASK' && <Calendar className="h-3 w-3" />}
+                      {message.actionTaken.type === 'CREATE_COMPETITION' && <Trophy className="h-3 w-3" />}
+                      {message.actionTaken.type === 'CREATE_ACTIVITY' && <Activity className="h-3 w-3" />}
+                      <span className="font-medium">{message.actionTaken.details.title}</span>
+                      {message.actionTaken.details.dueDate && (
+                        <span className="text-xs">• Due: {new Date(message.actionTaken.details.dueDate).toLocaleDateString()}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

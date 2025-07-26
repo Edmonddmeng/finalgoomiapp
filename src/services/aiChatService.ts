@@ -43,6 +43,18 @@ export interface ChatResponse {
     responseTime: number
     contextItems: number
   }
+  actionTaken?: {
+    type: 'CREATE_TASK' | 'CREATE_COMPETITION' | 'CREATE_ACTIVITY'
+    itemId: string
+    details: {
+      title: string
+      dueDate?: string
+      description?: string
+      category?: string
+      [key: string]: any
+    }
+  }
+  translationId?: string
 }
 
 export interface ChatHistoryResponse {

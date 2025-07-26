@@ -12,6 +12,7 @@ import { Evaluations } from "@/components/Evaluations/Evaluations"
 import { AIChatPage } from "@/components/AIChat/AIChatPage"
 import { ChatOverview } from "@/components/Chat/chat-overview"
 import SavedProfile from "@/components/SavedProfile/SavedProfile"
+import SchoolsBrowsePage from "@/app/protected/schools/page"
 import { useGlobalUnreadMessages } from "@/hooks/useGlobalUnreadMessages"
 
 function AppContent() {
@@ -32,6 +33,8 @@ function AppContent() {
         return <Profile />
       case "evaluations":
         return <Evaluations />
+      case "schools":
+        return <SchoolsBrowsePage />
       case "settings":
         return <Settings />
       case "chat":

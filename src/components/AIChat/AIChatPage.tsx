@@ -24,6 +24,17 @@ interface ChatMessage {
     ranking?: number
     websiteUrl: string
   }>
+  actionTaken?: {
+    type: 'CREATE_TASK' | 'CREATE_COMPETITION' | 'CREATE_ACTIVITY'
+    itemId: string
+    details: {
+      title: string
+      dueDate?: string
+      description?: string
+      category?: string
+      [key: string]: any
+    }
+  }
 }
 
 interface ConversationStarter {
@@ -37,12 +48,20 @@ interface ConversationStarter {
 
 const conversationStarters: ConversationStarter[] = [
   {
+    id: "assistant",
+    title: "AI Assistant",
+    iconType: "target",
+    prompt: "Help me manage my tasks, competitions, and activities.",
+    gradient: "from-indigo-500 to-purple-500",
+    delay: 0
+  },
+  {
     id: "prep-school",
     title: "Prep School Pick",
     iconType: "school",
     prompt: "I'd like help choosing the right prep school for my academic goals.",
     gradient: "from-blue-500 to-cyan-500",
-    delay: 0
+    delay: 100
   },
   {
     id: "college-pick",
@@ -50,7 +69,7 @@ const conversationStarters: ConversationStarter[] = [
     iconType: "graduation",
     prompt: "I need guidance on selecting colleges that fit my profile and interests.",
     gradient: "from-purple-500 to-pink-500",
-    delay: 100
+    delay: 200
   },
   {
     id: "chance-me",
@@ -58,7 +77,7 @@ const conversationStarters: ConversationStarter[] = [
     iconType: "target",
     prompt: "Can you assess my chances of getting into my target schools?",
     gradient: "from-orange-500 to-red-500",
-    delay: 200
+    delay: 300
   },
   {
     id: "support-me",
@@ -66,7 +85,7 @@ const conversationStarters: ConversationStarter[] = [
     iconType: "heart",
     prompt: "I need support with my academic challenges and stress management.",
     gradient: "from-pink-500 to-rose-500",
-    delay: 300
+    delay: 400
   },
   {
     id: "progress-check",
@@ -74,7 +93,7 @@ const conversationStarters: ConversationStarter[] = [
     iconType: "trending",
     prompt: "Let's review my academic progress and set new goals.",
     gradient: "from-green-500 to-emerald-500",
-    delay: 400
+    delay: 500
   }
 ]
 
@@ -177,6 +196,7 @@ export function AIChatPage() {
 
   const getStarterResponse = (starterId: string): string => {
     const responses: Record<string, string> = {
+      "assistant": "I'm your AI assistant! I can help you create and manage tasks, competitions, and activities. Just tell me what you need - for example: 'Create a task to study for my SAT', 'Add a competition for Science Olympiad', or 'Create an activity for my volunteer work'. How can I help you organize your academic life?",
       "prep-school": "I'd be happy to help you find the perfect prep school! To give you the best recommendations, could you tell me about your academic interests, location preferences, and what matters most to you in a school environment?",
       "college-pick": "Let's find colleges that align with your goals! I'll need to know about your academic performance, intended major, preferred locations, campus size, and any specific programs or activities you're interested in.",
       "chance-me": "I'll help evaluate your admission chances! Please share your GPA, standardized test scores, extracurricular activities, and the schools you're targeting. The more details you provide, the more accurate my assessment will be.",
@@ -224,10 +244,21 @@ export function AIChatPage() {
         type: "ai",
         content: response.response,
         timestamp: new Date(),
-        cards: parsedCards && parsedCards.length > 0 ? parsedCards : undefined
+        cards: parsedCards && parsedCards.length > 0 ? parsedCards : undefined,
+        actionTaken: response.actionTaken
       }
       
       setMessages((prev) => [...prev, aiResponse])
+      
+      // Show success notification if an item was created
+      if (response.actionTaken) {
+        const actionMessages = {
+          CREATE_TASK: `Task "${response.actionTaken.details.title}" created successfully!`,
+          CREATE_COMPETITION: `Competition "${response.actionTaken.details.title}" added successfully!`,
+          CREATE_ACTIVITY: `Activity "${response.actionTaken.details.title}" created successfully!`
+        }
+        toast.success(actionMessages[response.actionTaken.type])
+      }
     } catch (error: any) {
       console.error('Error sending message:', error)
       toast.error(error.message || 'Failed to send message')
@@ -320,10 +351,21 @@ export function AIChatPage() {
           type: "ai",
           content: response.response,
           timestamp: new Date(),
-          cards: parsedCards && parsedCards.length > 0 ? parsedCards : undefined
+          cards: parsedCards && parsedCards.length > 0 ? parsedCards : undefined,
+          actionTaken: response.actionTaken
         }
         
         setMessages(prev => [...prev, aiResponse])
+        
+        // Show success notification if an item was created
+        if (response.actionTaken) {
+          const actionMessages = {
+            CREATE_TASK: `Task "${response.actionTaken.details.title}" created successfully!`,
+            CREATE_COMPETITION: `Competition "${response.actionTaken.details.title}" added successfully!`,
+            CREATE_ACTIVITY: `Activity "${response.actionTaken.details.title}" created successfully!`
+          }
+          toast.success(actionMessages[response.actionTaken.type])
+        }
       } catch (error: any) {
         console.error('Error processing audio:', error)
         toast.error(error.message || 'Failed to process audio message')

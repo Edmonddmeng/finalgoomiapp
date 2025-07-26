@@ -117,7 +117,7 @@
 
 // Enhanced TabNavigation component with badge option (alternative version)
 "use client"
-import { LayoutDashboard, Milestone, Users, User, MessageSquare, Settings, LogOut, ClipboardCheck, Heart } from "lucide-react"
+import { LayoutDashboard, Milestone, Users, User, MessageSquare, Settings, LogOut, ClipboardCheck, Heart, GraduationCap } from "lucide-react"
 import { LogoIconDashboard } from "../Utils/logo"
 import { useAuth } from "@/contexts/AuthContext"
 import { useConfirm } from "@/components/Utils/ConfirmDialog"
@@ -136,6 +136,7 @@ const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "roadmap", label: "Roadmap", icon: Milestone },
   { id: "evaluations", label: "Evaluations", icon: ClipboardCheck },
+  { id: "schools", label: "Schools", icon: GraduationCap },
   { id: "community", label: "Community", icon: Users },
   { id: "profile", label: "Profile", icon: User },
   { id: "chat", label: "Chat", icon: MessageSquare },
